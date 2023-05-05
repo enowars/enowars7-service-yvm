@@ -1,0 +1,4 @@
+(executable
+ (name yvm)
+ (public_name yvm)
+ (package yvm))
