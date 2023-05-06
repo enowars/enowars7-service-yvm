@@ -23,6 +23,8 @@
               version = builtins.substring 0 8 self.lastModifiedDate;
               duneVersion = "3";
               nativeBuildInputs = [
+                ocamlPkgs.ppx_deriving
+                ocamlPkgs.ppxlib
               ];
               src = ./.;
             };
@@ -32,8 +34,12 @@
           devShells.default = pkgs.mkShell {
             buildInputs = with pkgs; [
               nixpkgs-fmt
+
               ocamlformat
               ocamlPackages.ocaml-lsp
+              ocamlPackages.utop
+
+              openjdk
 
               # https://old.reddit.com/r/NixOS/comments/ycde3d/vscode_terminal_not_working_properly/
               bashInteractive
