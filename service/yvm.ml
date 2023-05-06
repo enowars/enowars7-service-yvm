@@ -33,7 +33,14 @@ type constant =
 type frame = { locals : primType list; operand_stack : primType list }
 type foo = { pc : int; stack : frame list }
 
-type jclass = { version : int * int; constant_pool : constant array }
+type jclass = {
+  version : int * int;
+  constant_pool : constant array;
+  access_flags : int;
+  this_class : int;
+  super_class : int;
+  interfaces : int array;
+}
 [@@deriving show]
 
 let input_u2 ic =
@@ -102,7 +109,24 @@ let read_class ic =
     in
     constant_pool.(i) <- c
   done;
-  show_jclass { version = (major, minor); constant_pool } |> print_endline;
+  let access_flags = input_u2 ic in
+  let this_class = input_u2 ic in
+  let super_class = input_u2 ic in
+  let interfaces_count = input_u2 ic in
+  let interfaces = Array.make interfaces_count 0 in
+  for i = 0 to interfaces_count - 1 do
+    interfaces.(i) <- input_u2 ic
+  done;
+  show_jclass
+    {
+      version = (major, minor);
+      constant_pool;
+      access_flags;
+      this_class;
+      super_class;
+      interfaces;
+    }
+  |> print_endline;
   Array.iteri
     (fun i el ->
       print_int i;
