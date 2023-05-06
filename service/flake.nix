@@ -34,6 +34,9 @@
               nixpkgs-fmt
               ocamlformat
               ocamlPackages.ocaml-lsp
+
+              # https://old.reddit.com/r/NixOS/comments/ycde3d/vscode_terminal_not_working_properly/
+              bashInteractive
             ];
 
             inputsFrom = [ self.packages.${system}.default ];
