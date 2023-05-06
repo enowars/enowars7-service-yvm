@@ -5,3 +5,5 @@ https://github.com/morgenthum/coldspot
 https://github.com/imkiva/HiVM
 https://github.com/ppedemon/hava
 https://github.com/rotcev/haskell-jvm-interpreter
+
+https://github.com/apache/commons-bcel/blob/master/src/main/java/org/apache/bcel/classfile/ClassParser.java
