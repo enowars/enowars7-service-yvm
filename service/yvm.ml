@@ -56,6 +56,7 @@ type field_info = {
   is_enum : bool;
   name_index : int;
   descriptor_index : int;
+  attributes : attribute_info array;
 }
 [@@deriving show]
 
@@ -160,6 +161,7 @@ let read_class ic =
         is_enum = false;
         name_index = -1;
         descriptor_index = -1;
+        attributes = [||];
       }
   in
   for i = 0 to fields_count - 1 do
@@ -185,6 +187,16 @@ let read_class ic =
     let is_enum = access_flags_int land 0x4000 = 1 in
     let name_index = input_u2 ic in
     let descriptor_index = input_u2 ic in
+    let attributes_count = input_u2 ic in
+    let attributes =
+      Array.make attributes_count { attribute_name_index = -1; info = "" }
+    in
+    for a = 0 to attributes_count - 1 do
+      let attribute_name_index = input_u2 ic in
+      let length = input_u4 ic in
+      attributes.(a) <-
+        { attribute_name_index; info = really_input_string ic length }
+    done;
     fields.(i) <-
       {
         access_flags;
@@ -195,6 +207,7 @@ let read_class ic =
         is_enum;
         name_index;
         descriptor_index;
+        attributes;
       }
   done;
 
