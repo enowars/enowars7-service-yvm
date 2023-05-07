@@ -30,6 +30,35 @@ type constant =
   | C_Package
 [@@deriving show]
 
+type access_flag = ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED [@@deriving show]
+type access_flag_1 = ACC_FINAL | ACC_VOLATILE [@@deriving show]
+
+type attribute_info = { attribute_name_index : int; info : string }
+[@@deriving show]
+
+type attribute =
+  | AT_Code of {
+      attribute_name_index : int;
+      max_stack : int;
+      max_locals : int;
+      code : string;
+      attribute_info : attribute_info array;
+    }
+    (* TODO exception table *)
+[@@deriving show]
+
+type field_info = {
+  access_flags : access_flag option;
+  access_flag_1 : access_flag_1 option;
+  is_static : bool;
+  is_transient : bool;
+  is_synthetic : bool;
+  is_enum : bool;
+  name_index : int;
+  descriptor_index : int;
+}
+[@@deriving show]
+
 type frame = { locals : primType list; operand_stack : primType list }
 type foo = { pc : int; stack : frame list }
 
@@ -40,6 +69,7 @@ type jclass = {
   this_class : int;
   super_class : int;
   interfaces : int array;
+  fields : field_info array;
 }
 [@@deriving show]
 
@@ -117,6 +147,57 @@ let read_class ic =
   for i = 0 to interfaces_count - 1 do
     interfaces.(i) <- input_u2 ic
   done;
+
+  let fields_count = input_u2 ic in
+  let fields =
+    Array.make fields_count
+      {
+        access_flags = None;
+        access_flag_1 = None;
+        is_static = false;
+        is_transient = false;
+        is_synthetic = false;
+        is_enum = false;
+        name_index = -1;
+        descriptor_index = -1;
+      }
+  in
+  for i = 0 to fields_count - 1 do
+    let access_flags_int = input_u2 ic in
+    let access_flags =
+      match access_flags_int land 0b111 with
+      | 0 -> None
+      | 1 -> Some ACC_PUBLIC
+      | 2 -> Some ACC_PRIVATE
+      | 4 -> Some ACC_PROTECTED
+      | _ -> raise (Failure "unexpected acces type")
+    in
+    let is_static = access_flags_int land 0x0008 = 1 in
+    let access_flag_1 =
+      match access_flags_int land 0b1110000 with
+      | 0 -> None
+      | 0x0010 -> Some ACC_FINAL
+      | 0x0040 -> Some ACC_VOLATILE
+      | _ -> raise (Failure "unexpected acces type")
+    in
+    let is_transient = access_flags_int land 0x0080 = 1 in
+    let is_synthetic = access_flags_int land 0x1000 = 1 in
+    let is_enum = access_flags_int land 0x4000 = 1 in
+    let name_index = input_u2 ic in
+    let descriptor_index = input_u2 ic in
+    fields.(i) <-
+      {
+        access_flags;
+        access_flag_1;
+        is_static;
+        is_transient;
+        is_synthetic;
+        is_enum;
+        name_index;
+        descriptor_index;
+      }
+  done;
+
   show_jclass
     {
       version = (major, minor);
@@ -125,6 +206,7 @@ let read_class ic =
       this_class;
       super_class;
       interfaces;
+      fields;
     }
   |> print_endline;
   Array.iteri
