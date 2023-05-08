@@ -60,6 +60,14 @@ type field_info = {
 }
 [@@deriving show]
 
+type method_info = {
+  access_flags : int;
+  name_index : int;
+  descriptor_index : int;
+  attributes : attribute_info array;
+}
+[@@deriving show]
+
 type frame = { locals : primType list; operand_stack : primType list }
 type foo = { pc : int; stack : frame list }
 
@@ -71,6 +79,8 @@ type jclass = {
   super_class : int;
   interfaces : int array;
   fields : field_info array;
+  methods : method_info array;
+  attributes : attribute_info array;
 }
 [@@deriving show]
 
@@ -136,7 +146,7 @@ let read_class ic =
       | 19 -> C_Module
       | 20 -> C_Package
          *)
-      | _ -> raise (Failure "unexpected Constant Kind Tag")
+      | _ -> failwith "unexpected Constant Kind Tag"
     in
     constant_pool.(i) <- c
   done;
@@ -172,7 +182,7 @@ let read_class ic =
       | 1 -> Some ACC_PUBLIC
       | 2 -> Some ACC_PRIVATE
       | 4 -> Some ACC_PROTECTED
-      | _ -> raise (Failure "unexpected acces type")
+      | _ -> failwith "unexpected acces type"
     in
     let is_static = access_flags_int land 0x0008 = 1 in
     let access_flag_1 =
@@ -180,7 +190,7 @@ let read_class ic =
       | 0 -> None
       | 0x0010 -> Some ACC_FINAL
       | 0x0040 -> Some ACC_VOLATILE
-      | _ -> raise (Failure "unexpected acces type")
+      | _ -> failwith "unexpected acces type"
     in
     let is_transient = access_flags_int land 0x0080 = 1 in
     let is_synthetic = access_flags_int land 0x1000 = 1 in
@@ -211,6 +221,52 @@ let read_class ic =
       }
   done;
 
+  let methods_count = input_u2 ic in
+  Printf.printf "\n%d\n\n" methods_count;
+
+  let methods =
+    Array.make methods_count
+      {
+        access_flags = -1;
+        name_index = -1;
+        descriptor_index = -1;
+        attributes = [||];
+      }
+  in
+
+  for i = 0 to methods_count - 1 do
+    let access_flags = input_u2 ic in
+    let name_index = input_u2 ic in
+    let descriptor_index = input_u2 ic in
+    let attributes_count = input_u2 ic in
+    let attributes =
+      Array.make attributes_count { attribute_name_index = -1; info = "" }
+    in
+    for a = 0 to attributes_count - 1 do
+      let attribute_name_index = input_u2 ic in
+      let length = input_u4 ic in
+      attributes.(a) <-
+        { attribute_name_index; info = really_input_string ic length }
+    done;
+    methods.(i) <- {
+      access_flags;
+      name_index;
+      descriptor_index;
+      attributes
+    }
+  done;
+
+  let attributes_count = input_u2 ic in
+  let attributes =
+    Array.make attributes_count { attribute_name_index = -1; info = "" }
+  in
+  for a = 0 to attributes_count - 1 do
+    let attribute_name_index = input_u2 ic in
+    let length = input_u4 ic in
+    attributes.(a) <-
+      { attribute_name_index; info = really_input_string ic length }
+  done;
+
   show_jclass
     {
       version = (major, minor);
@@ -220,6 +276,8 @@ let read_class ic =
       super_class;
       interfaces;
       fields;
+      methods;
+      attributes;
     }
   |> print_endline;
   Array.iteri
