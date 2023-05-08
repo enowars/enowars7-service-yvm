@@ -99,6 +99,93 @@ let input_u8 ic =
   let u42 = input_u4 ic in
   u41 lor u42
 
+let parse_cp_info ic =
+  let kind = input_byte ic in
+  match kind with
+  | 1 ->
+      let length = input_u2 ic in
+      C_Utf8 (really_input_string ic length)
+  (*
+    | 3 -> C_Integer
+    | 4 -> C_Float
+    | 5 -> C_Long
+    | 6 -> C_Double
+    | 8 -> C_String
+        *)
+  | 7 -> C_Class { name_index = input_u2 ic }
+  | 9 ->
+      let class_index = input_u2 ic in
+      let name_and_type_index = input_u2 ic in
+      C_Fieldref { class_index; name_and_type_index }
+  | 10 ->
+      let class_index = input_u2 ic in
+      let name_and_type_index = input_u2 ic in
+      C_Methodref { class_index; name_and_type_index }
+  | 11 ->
+      let class_index = input_u2 ic in
+      let name_and_type_index = input_u2 ic in
+      C_InterfaceMethodref { class_index; name_and_type_index }
+  | 12 ->
+      let name_index = input_u2 ic in
+      let descriptor_index = input_u2 ic in
+      C_NameAndType { name_index; descriptor_index }
+  (*
+    | 15 -> C_MethodHandle
+    | 16 -> C_MethodType
+    | 17 -> C_Dynamic
+    | 18 -> C_InvokeDynamic
+    | 19 -> C_Module
+    | 20 -> C_Package
+        *)
+  | _ -> failwith "unexpected Constant Kind Tag"
+
+let parse_attribute_info ic =
+  let attribute_name_index = input_u2 ic in
+  let length = input_u4 ic in
+  { attribute_name_index; info = really_input_string ic length }
+
+let parse_field_info ic =
+  let access_flags_int = input_u2 ic in
+  let access_flags =
+    match access_flags_int land 0b111 with
+    | 0 -> None
+    | 1 -> Some ACC_PUBLIC
+    | 2 -> Some ACC_PRIVATE
+    | 4 -> Some ACC_PROTECTED
+    | _ -> failwith "unexpected acces type"
+  in
+  let is_static = access_flags_int land 0x0008 = 1 in
+  let access_flag_1 =
+    match access_flags_int land 0b1110000 with
+    | 0 -> None
+    | 0x0010 -> Some ACC_FINAL
+    | 0x0040 -> Some ACC_VOLATILE
+    | _ -> failwith "unexpected acces type"
+  in
+  let is_transient = access_flags_int land 0x0080 = 1 in
+  let is_synthetic = access_flags_int land 0x1000 = 1 in
+  let is_enum = access_flags_int land 0x4000 = 1 in
+  let name_index = input_u2 ic in
+  let descriptor_index = input_u2 ic in
+  let attributes_count = input_u2 ic in
+  let attributes =
+    Array.make attributes_count { attribute_name_index = -1; info = "" }
+  in
+  for a = 0 to attributes_count - 1 do
+    attributes.(a) <- parse_attribute_info ic
+  done;
+  {
+    access_flags;
+    access_flag_1;
+    is_static;
+    is_transient;
+    is_synthetic;
+    is_enum;
+    name_index;
+    descriptor_index;
+    attributes;
+  }
+
 let read_class ic =
   assert (input_u4 ic = 0xcafebabe);
   let minor = input_u2 ic in
@@ -106,49 +193,7 @@ let read_class ic =
   let constant_pool_count = input_u2 ic in
   let constant_pool = Array.make constant_pool_count (C_Utf8 "fill") in
   for i = 1 to constant_pool_count - 1 do
-    let kind = input_byte ic in
-    print_int kind;
-    print_endline "";
-    let c =
-      match kind with
-      | 1 ->
-          let length = input_u2 ic in
-          C_Utf8 (really_input_string ic length)
-      (*
-      | 3 -> C_Integer
-      | 4 -> C_Float
-      | 5 -> C_Long
-      | 6 -> C_Double
-      | 8 -> C_String
-         *)
-      | 7 -> C_Class { name_index = input_u2 ic }
-      | 9 ->
-          let class_index = input_u2 ic in
-          let name_and_type_index = input_u2 ic in
-          C_Fieldref { class_index; name_and_type_index }
-      | 10 ->
-          let class_index = input_u2 ic in
-          let name_and_type_index = input_u2 ic in
-          C_Methodref { class_index; name_and_type_index }
-      | 11 ->
-          let class_index = input_u2 ic in
-          let name_and_type_index = input_u2 ic in
-          C_InterfaceMethodref { class_index; name_and_type_index }
-      | 12 ->
-          let name_index = input_u2 ic in
-          let descriptor_index = input_u2 ic in
-          C_NameAndType { name_index; descriptor_index }
-      (*
-      | 15 -> C_MethodHandle
-      | 16 -> C_MethodType
-      | 17 -> C_Dynamic
-      | 18 -> C_InvokeDynamic
-      | 19 -> C_Module
-      | 20 -> C_Package
-         *)
-      | _ -> failwith "unexpected Constant Kind Tag"
-    in
-    constant_pool.(i) <- c
+    constant_pool.(i) <- parse_cp_info ic
   done;
   let access_flags = input_u2 ic in
   let this_class = input_u2 ic in
@@ -175,55 +220,10 @@ let read_class ic =
       }
   in
   for i = 0 to fields_count - 1 do
-    let access_flags_int = input_u2 ic in
-    let access_flags =
-      match access_flags_int land 0b111 with
-      | 0 -> None
-      | 1 -> Some ACC_PUBLIC
-      | 2 -> Some ACC_PRIVATE
-      | 4 -> Some ACC_PROTECTED
-      | _ -> failwith "unexpected acces type"
-    in
-    let is_static = access_flags_int land 0x0008 = 1 in
-    let access_flag_1 =
-      match access_flags_int land 0b1110000 with
-      | 0 -> None
-      | 0x0010 -> Some ACC_FINAL
-      | 0x0040 -> Some ACC_VOLATILE
-      | _ -> failwith "unexpected acces type"
-    in
-    let is_transient = access_flags_int land 0x0080 = 1 in
-    let is_synthetic = access_flags_int land 0x1000 = 1 in
-    let is_enum = access_flags_int land 0x4000 = 1 in
-    let name_index = input_u2 ic in
-    let descriptor_index = input_u2 ic in
-    let attributes_count = input_u2 ic in
-    let attributes =
-      Array.make attributes_count { attribute_name_index = -1; info = "" }
-    in
-    for a = 0 to attributes_count - 1 do
-      let attribute_name_index = input_u2 ic in
-      let length = input_u4 ic in
-      attributes.(a) <-
-        { attribute_name_index; info = really_input_string ic length }
-    done;
-    fields.(i) <-
-      {
-        access_flags;
-        access_flag_1;
-        is_static;
-        is_transient;
-        is_synthetic;
-        is_enum;
-        name_index;
-        descriptor_index;
-        attributes;
-      }
+    fields.(i) <- parse_field_info ic
   done;
 
   let methods_count = input_u2 ic in
-  Printf.printf "\n%d\n\n" methods_count;
-
   let methods =
     Array.make methods_count
       {
@@ -243,17 +243,9 @@ let read_class ic =
       Array.make attributes_count { attribute_name_index = -1; info = "" }
     in
     for a = 0 to attributes_count - 1 do
-      let attribute_name_index = input_u2 ic in
-      let length = input_u4 ic in
-      attributes.(a) <-
-        { attribute_name_index; info = really_input_string ic length }
+      attributes.(a) <- parse_attribute_info ic
     done;
-    methods.(i) <- {
-      access_flags;
-      name_index;
-      descriptor_index;
-      attributes
-    }
+    methods.(i) <- { access_flags; name_index; descriptor_index; attributes }
   done;
 
   let attributes_count = input_u2 ic in
@@ -261,10 +253,7 @@ let read_class ic =
     Array.make attributes_count { attribute_name_index = -1; info = "" }
   in
   for a = 0 to attributes_count - 1 do
-    let attribute_name_index = input_u2 ic in
-    let length = input_u4 ic in
-    attributes.(a) <-
-      { attribute_name_index; info = really_input_string ic length }
+    attributes.(a) <- parse_attribute_info ic
   done;
 
   show_jclass
@@ -286,6 +275,9 @@ let read_class ic =
       print_char ' ';
       show_constant el |> print_endline)
     constant_pool;
+
+  assert (In_channel.pos ic = In_channel.length ic);
+
   print_endline ""
 
 let () = In_channel.with_open_bin "Foo.class" read_class
