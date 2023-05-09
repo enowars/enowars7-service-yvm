@@ -71,7 +71,7 @@ type method_info = {
 type frame = { locals : primType list; operand_stack : primType list }
 type foo = { pc : int; stack : frame list }
 
-type jclass = {
+type raw_class = {
   version : int * int;
   constant_pool : constant array;
   access_flags : int;
@@ -81,6 +81,29 @@ type jclass = {
   fields : field_info array;
   methods : method_info array;
   attributes : attribute_info array;
+}
+[@@deriving show]
+
+type exc_table_entry = {
+  start_pc : int;
+  end_pc : int;
+  handler_pc : int;
+  catch_type : int;
+}
+[@@deriving show]
+
+type meth = {
+  max_stack : int;
+  max_locals : int;
+  code : string;
+  exc_table : exc_table_entry array;
+}
+[@@deriving show]
+
+type ckd_class = {
+  name : string;
+  super : string;
+  methods : (string * meth) list;
 }
 [@@deriving show]
 
@@ -256,28 +279,63 @@ let read_class ic =
     attributes.(a) <- parse_attribute_info ic
   done;
 
-  show_jclass
-    {
-      version = (major, minor);
-      constant_pool;
-      access_flags;
-      this_class;
-      super_class;
-      interfaces;
-      fields;
-      methods;
-      attributes;
-    }
-  |> print_endline;
+  assert (In_channel.pos ic = In_channel.length ic);
+  {
+    version = (major, minor);
+    constant_pool;
+    access_flags;
+    this_class;
+    super_class;
+    interfaces;
+    fields;
+    methods;
+    attributes;
+  }
+
+let parse_class path = In_channel.with_open_bin path read_class
+
+let cook_class raw_class =
+  let cp = raw_class.constant_pool in
+  let rslv_name idx =
+    match cp.(idx) with C_Utf8 str -> str | _ -> failwith "expected string"
+  in
+  let rslv_class idx =
+    let nidx =
+      match cp.(idx) with
+      | C_Class c -> c.name_index
+      | _ -> failwith "expected class"
+    in
+    rslv_name nidx
+  in
+  let name = rslv_class raw_class.this_class in
+  let super = rslv_class raw_class.super_class in
+  let cook_meth raw_meth =
+    let name = rslv_name raw_meth.name_index in
+    let code_attr = raw_meth.attributes.(0) in
+    assert (rslv_name code_attr.attribute_name_index = "Code");
+    let code_str = code_attr.info in
+    let max_stack = String.get_uint16_be code_str 0 in
+    let max_locals = String.get_uint16_be code_str 2 in
+    let code_len = String.get_int32_be code_str 4 |> Int32.to_int in
+    ( name,
+      {
+        max_stack;
+        max_locals;
+        code = String.sub code_str 8 code_len;
+        exc_table = [||];
+      } )
+  in
+  let methods = raw_class.methods |> Array.map cook_meth |> Array.to_list in
+  { name; super; methods }
+
+let () =
+  let r_cls = parse_class "Foo.class" in
+  show_raw_class r_cls |> print_endline;
   Array.iteri
     (fun i el ->
       print_int i;
       print_char ' ';
       show_constant el |> print_endline)
-    constant_pool;
-
-  assert (In_channel.pos ic = In_channel.length ic);
-
-  print_endline ""
-
-let () = In_channel.with_open_bin "Foo.class" read_class
+    r_cls.constant_pool;
+  let c_cls = cook_class r_cls in
+  c_cls |> show_ckd_class |> print_endline
