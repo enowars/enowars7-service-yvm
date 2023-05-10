@@ -1,5 +1,9 @@
 let run (c_cls : Jparser.ckd_class) =
-  let main = List.assoc "main" c_cls.methods in
+  let main =
+    match List.assoc_opt "main" c_cls.methods with
+    | Some main -> main
+    | None -> failwith "no main Method present"
+  in
   let code = main.code in
   let pc = ref 0 in
   let stack = Stack.create () in
