@@ -327,4 +327,3 @@ let cook_class raw_class =
   in
   let methods = raw_class.methods |> Array.map cook_meth |> Array.to_list in
   { name; super; methods }
-
