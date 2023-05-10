@@ -2,6 +2,12 @@
  (name yvm)
  (public_name yvm)
  (package yvm)
+ (modules yvm)
+ (libraries yvm_lib))
+
+(library
+ (name yvm_lib)
+ (modules :standard \ yvm)
  (preprocess
   (pps ppx_deriving.show)))
 
