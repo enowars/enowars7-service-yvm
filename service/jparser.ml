@@ -216,7 +216,11 @@ let read_class ic =
   let constant_pool_count = input_u2 ic in
   let constant_pool = Array.make constant_pool_count (C_Utf8 "fill") in
   for i = 1 to constant_pool_count - 1 do
-    constant_pool.(i) <- parse_cp_info ic
+    match constant_pool.(i - 1) with
+    (* skip since Double and Long take two slots *)
+    | C_Double _ -> ()
+    | C_Long _ -> ()
+    | _ -> constant_pool.(i) <- parse_cp_info ic
   done;
   let access_flags = input_u2 ic in
   let this_class = input_u2 ic in
