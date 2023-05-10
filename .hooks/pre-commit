@@ -11,7 +11,9 @@ SUCC=true
 
 if grep "^service" <(git diff --cached --name-only) 1> /dev/null
 then
-	if ! ocamlformat --check service/*ml
+	if ! ocamlformat --check \
+		$(find service/src/ -regex ".*mli?") \
+		$(find service/test/ -regex ".*mli?")
 	then
 		echo OCaml formatting!
 		SUCC=false
