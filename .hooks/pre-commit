@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+#
+# based on git's pre-commit.sample
+
+# Redirect output to stderr.
+exec 1>&2
+
+git stash --keep-index --quiet
+
+SUCC=true
+
+if grep "^service" <(git diff --cached --name-only) 1> /dev/null
+then
+	if ! ocamlformat --check service/*ml
+	then
+		echo OCaml formatting!
+		SUCC=false
+	fi
+	if ! dune build --root=service
+	then
+		SUCC=false
+	fi
+fi
+
+# Cross platform projects tend to avoid non-ASCII filenames; prevent
+# them from being added to the repository. We exploit the fact that the
+# printable range starts at the space character and ends with tilde.
+#
+# Note that the use of brackets around a tr range is ok here, (it's
+# even required, for portability to Solaris 10's /usr/bin/tr), since
+# the square bracket bytes happen to fall in the designated range.
+if test $(git diff --cached --name-only --diff-filter=A -z |
+	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
+then
+	echo Error: Attempt to add a non-ASCII file name.
+	SUCC=false
+fi
+
+# If there are whitespace errors, print the offending file names
+if ! git diff-index --check --cached HEAD --
+then
+	SUCC=false
+fi
+
+git stash pop --quiet
+
+$SUCC
