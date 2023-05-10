@@ -1,0 +1,10 @@
+(test
+ (name jparser_test)
+ (libraries yvm_lib)
+ (deps Foo.class))
+
+(rule
+ (deps Foo.java)
+ (targets Foo.class)
+ (action
+  (run javac Foo.java)))
