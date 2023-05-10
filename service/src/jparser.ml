@@ -109,6 +109,7 @@ type meth = {
 type ckd_class = {
   name : string;
   super : string;
+  constant_pool : constant array;
   methods : (string * meth) list;
 }
 [@@deriving show]
@@ -313,7 +314,7 @@ let read_class ic =
 
 let parse_class path = In_channel.with_open_bin path read_class
 
-let cook_class raw_class =
+let cook_class (raw_class : raw_class) =
   let cp = raw_class.constant_pool in
   let rslv_name idx =
     match cp.(idx) with C_Utf8 str -> str | _ -> failwith "expected string"
@@ -345,4 +346,4 @@ let cook_class raw_class =
       } )
   in
   let methods = raw_class.methods |> Array.map cook_meth |> Array.to_list in
-  { name; super; methods }
+  { name; super; constant_pool = cp; methods }
