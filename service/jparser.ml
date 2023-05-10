@@ -12,20 +12,26 @@ type primType =
 
 type constant =
   | C_Utf8 of string
-  | C_Integer
-  | C_Float
-  | C_Long
-  | C_Double
+  | C_Integer of int32
+  | C_Float of float
+  | C_Long of int
+  | C_Double of float
   | C_Class of { name_index : int }
-  | C_String
+  | C_String of { string_index : int }
   | C_Fieldref of { class_index : int; name_and_type_index : int }
   | C_Methodref of { class_index : int; name_and_type_index : int }
   | C_InterfaceMethodref of { class_index : int; name_and_type_index : int }
   | C_NameAndType of { name_index : int; descriptor_index : int }
-  | C_MethodHandle
-  | C_MethodType
-  | C_Dynamic
-  | C_InvokeDynamic
+  | C_MethodHandle of { reference_kind : int; reference_index : int }
+  | C_MethodType of { descriptor_index : int }
+  | C_Dynamic of {
+      bootstrap_method_attr_index : int;
+      name_and_type_index : int;
+    }
+  | C_InvokeDynamic of {
+      bootstrap_method_attr_index : int;
+      name_and_type_index : int;
+    }
   | C_Module
   | C_Package
 [@@deriving show]
@@ -128,14 +134,12 @@ let parse_cp_info ic =
   | 1 ->
       let length = input_u2 ic in
       C_Utf8 (really_input_string ic length)
-  (*
-    | 3 -> C_Integer
-    | 4 -> C_Float
-    | 5 -> C_Long
-    | 6 -> C_Double
-    | 8 -> C_String
-        *)
+  | 3 -> C_Integer (input_u4 ic |> Int32.of_int)
+  | 4 -> C_Float (input_u4 ic |> Int32.of_int |> Int32.float_of_bits)
+  | 5 -> C_Long (input_u8 ic)
+  | 6 -> C_Double (input_u8 ic |> Int64.of_int |> Int64.float_of_bits)
   | 7 -> C_Class { name_index = input_u2 ic }
+  | 8 -> C_String { string_index = input_u2 ic }
   | 9 ->
       let class_index = input_u2 ic in
       let name_and_type_index = input_u2 ic in
@@ -152,11 +156,22 @@ let parse_cp_info ic =
       let name_index = input_u2 ic in
       let descriptor_index = input_u2 ic in
       C_NameAndType { name_index; descriptor_index }
+  | 15 ->
+      let reference_kind = input_byte ic in
+      let reference_index = input_u2 ic in
+      C_MethodHandle { reference_kind; reference_index }
+  | 16 ->
+      let descriptor_index = input_u2 ic in
+      C_MethodType { descriptor_index }
+  | 17 ->
+      let bootstrap_method_attr_index = input_u2 ic in
+      let name_and_type_index = input_u2 ic in
+      C_Dynamic { bootstrap_method_attr_index; name_and_type_index }
+  | 18 ->
+      let bootstrap_method_attr_index = input_u2 ic in
+      let name_and_type_index = input_u2 ic in
+      C_InvokeDynamic { bootstrap_method_attr_index; name_and_type_index }
   (*
-    | 15 -> C_MethodHandle
-    | 16 -> C_MethodType
-    | 17 -> C_Dynamic
-    | 18 -> C_InvokeDynamic
     | 19 -> C_Module
     | 20 -> C_Package
         *)
