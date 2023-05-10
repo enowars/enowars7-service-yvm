@@ -160,7 +160,7 @@ let parse_cp_info ic =
     | 19 -> C_Module
     | 20 -> C_Package
         *)
-  | _ -> failwith "unexpected Constant Kind Tag"
+  | tag -> tag |> Printf.sprintf "unexpected Constant Kind Tag: %d" |> failwith
 
 let parse_attribute_info ic =
   let attribute_name_index = input_u2 ic in
