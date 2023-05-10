@@ -18,7 +18,13 @@ then
 		echo OCaml formatting!
 		SUCC=false
 	fi
+
 	if ! dune build --root=service
+	then
+		SUCC=false
+	fi
+
+	if ! dune runtest --root=service
 	then
 		SUCC=false
 	fi
