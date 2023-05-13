@@ -9,6 +9,7 @@ type primType =
   | Double of float
   | Reference
   | ReturnAddress
+[@@deriving show]
 
 type constant =
   | C_Utf8 of string
@@ -117,6 +118,8 @@ type ckd_class = {
   super : string;
   constant_pool : constant array;
   ckd_cp : ckd_constant array;
+  meths : ((string * string) * meth) list;
+  fields : ((string * string) * primType) list;
 }
 [@@deriving show]
 
@@ -346,26 +349,35 @@ let cook_cp_entry (cp : constant array) (cp_entry : constant) =
       CKD_Field { klass; name_and_type }
   | _ -> CKD_Dummy
 
+let cook_field cp (raw_field : field_info) =
+  let name = rslv_name cp raw_field.name_index in
+  let dscr = rslv_name cp raw_field.descriptor_index in
+  match dscr with
+  | "I" -> ((name, dscr), Int 1337l)
+  | s -> "unsupported field type " ^ s |> failwith
+
+let cook_meth cp raw_meth =
+  let name = rslv_name cp raw_meth.name_index in
+  let dscr = rslv_name cp raw_meth.descriptor_index in
+  let code_attr = raw_meth.attributes.(0) in
+  assert (rslv_name cp code_attr.attribute_name_index = "Code");
+  let code_str = code_attr.info in
+  let max_stack = String.get_uint16_be code_str 0 in
+  let max_locals = String.get_uint16_be code_str 2 in
+  let code_len = String.get_int32_be code_str 4 |> Int32.to_int in
+  ( (name, dscr),
+    {
+      max_stack;
+      max_locals;
+      code = String.sub code_str 8 code_len;
+      exc_table = [||];
+    } )
+
 let cook_class (raw_class : raw_class) =
   let cp = raw_class.constant_pool in
   let name = rslv_class cp raw_class.this_class in
   let super = rslv_class cp raw_class.super_class in
   let ckd_cp = Array.map (cook_cp_entry cp) cp in
-  let cook_meth raw_meth =
-    let name = rslv_name cp raw_meth.name_index in
-    let code_attr = raw_meth.attributes.(0) in
-    assert (rslv_name cp code_attr.attribute_name_index = "Code");
-    let code_str = code_attr.info in
-    let max_stack = String.get_uint16_be code_str 0 in
-    let max_locals = String.get_uint16_be code_str 2 in
-    let code_len = String.get_int32_be code_str 4 |> Int32.to_int in
-    ( name,
-      {
-        max_stack;
-        max_locals;
-        code = String.sub code_str 8 code_len;
-        exc_table = [||];
-      } )
-  in
-  let methods = raw_class.methods |> Array.map cook_meth |> Array.to_list in
-  ({ name; super; constant_pool = cp; ckd_cp }, methods)
+  let meths = raw_class.methods |> Array.map (cook_meth cp) |> Array.to_list in
+  let fields = raw_class.fields |> Array.map (cook_field cp) |> Array.to_list in
+  { name; super; constant_pool = cp; ckd_cp; meths; fields }
