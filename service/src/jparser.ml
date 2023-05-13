@@ -36,6 +36,12 @@ type constant =
   | C_Package
 [@@deriving show]
 
+type ckd_constant =
+  | CKD_Dummy
+  | CKD_Method of { klass : string; name_and_type : string * string }
+  | CKD_Field of { klass : string; name_and_type : string * string }
+[@@deriving show]
+
 type access_flag = ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED [@@deriving show]
 type access_flag_1 = ACC_FINAL | ACC_VOLATILE [@@deriving show]
 
@@ -110,7 +116,7 @@ type ckd_class = {
   name : string;
   super : string;
   constant_pool : constant array;
-  methods : (string * meth) list;
+  ckd_cp : ckd_constant array;
 }
 [@@deriving show]
 
@@ -314,25 +320,41 @@ let read_class ic =
 
 let parse_class path = In_channel.with_open_bin path read_class
 
+let rslv_name cp idx =
+  match cp.(idx) with C_Utf8 str -> str | _ -> failwith "expected string"
+
+let rslv_class cp idx =
+  match cp.(idx) with
+  | C_Class c -> rslv_name cp c.name_index
+  | _ -> failwith "expected class"
+
+let rslv_name_and_type cp ntidx =
+  match cp.(ntidx) with
+  | C_NameAndType { name_index; descriptor_index } ->
+      (rslv_name cp name_index, rslv_name cp descriptor_index)
+  | _ -> failwith "expected name_and_type"
+
+let cook_cp_entry (cp : constant array) (cp_entry : constant) =
+  match cp_entry with
+  | C_Methodref { class_index; name_and_type_index } ->
+      let klass = rslv_class cp class_index in
+      let name_and_type = rslv_name_and_type cp name_and_type_index in
+      CKD_Method { klass; name_and_type }
+  | C_Fieldref { class_index; name_and_type_index } ->
+      let klass = rslv_class cp class_index in
+      let name_and_type = rslv_name_and_type cp name_and_type_index in
+      CKD_Field { klass; name_and_type }
+  | _ -> CKD_Dummy
+
 let cook_class (raw_class : raw_class) =
   let cp = raw_class.constant_pool in
-  let rslv_name idx =
-    match cp.(idx) with C_Utf8 str -> str | _ -> failwith "expected string"
-  in
-  let rslv_class idx =
-    let nidx =
-      match cp.(idx) with
-      | C_Class c -> c.name_index
-      | _ -> failwith "expected class"
-    in
-    rslv_name nidx
-  in
-  let name = rslv_class raw_class.this_class in
-  let super = rslv_class raw_class.super_class in
+  let name = rslv_class cp raw_class.this_class in
+  let super = rslv_class cp raw_class.super_class in
+  let ckd_cp = Array.map (cook_cp_entry cp) cp in
   let cook_meth raw_meth =
-    let name = rslv_name raw_meth.name_index in
+    let name = rslv_name cp raw_meth.name_index in
     let code_attr = raw_meth.attributes.(0) in
-    assert (rslv_name code_attr.attribute_name_index = "Code");
+    assert (rslv_name cp code_attr.attribute_name_index = "Code");
     let code_str = code_attr.info in
     let max_stack = String.get_uint16_be code_str 0 in
     let max_locals = String.get_uint16_be code_str 2 in
@@ -346,4 +368,4 @@ let cook_class (raw_class : raw_class) =
       } )
   in
   let methods = raw_class.methods |> Array.map cook_meth |> Array.to_list in
-  { name; super; constant_pool = cp; methods }
+  ({ name; super; constant_pool = cp; ckd_cp }, methods)
