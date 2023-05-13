@@ -9,17 +9,45 @@ let run (c_cls : Jparser.ckd_class) =
   let stack = Stack.create () in
   let locals = Array.make main.max_locals 0 in
   let cp = c_cls.constant_pool in
+  let get_u2 code pc =
+    let b1 = (code.[!pc + 1] |> Char.code) lsl 8 in
+    let b2 = code.[!pc + 2] |> Char.code in
+    b1 lor b2
+  in
   while true do
     let opcode = code.[!pc] in
     let () =
       match opcode with
+      | '\x08' (*iconst_5*) ->
+          Stack.push 5 stack;
+          pc := !pc + 1
       | '\x10' (*bipush*) ->
           let byte = code.[!pc + 1] |> Char.code in
           Stack.push byte stack;
           pc := !pc + 2
+      | '\x11' (*sipush*) ->
+          Stack.push (get_u2 code pc) stack;
+          pc := !pc + 3
+      | '\x19' (*aload*) ->
+          let lidx = code.[!pc + 1] |> Char.code in
+          Stack.push locals.(lidx) stack;
+          pc := !pc + 2
+      | '\x2a' (*aload_0*) ->
+          Stack.push locals.(0) stack;
+          pc := !pc + 1
       | '\x3c' (*istore_1*) ->
           locals.(1) <- Stack.pop stack;
           pc := !pc + 1
+      | '\xb3' (*putstatic*) ->
+          let idx = get_u2 code pc in
+          let klass, (name, jtype) =
+            match c_cls.ckd_cp.(idx) with
+            | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
+            | _ -> failwith "expected field"
+          in
+          print_endline (klass ^ " (" ^ name ^ ", " ^ jtype ^ ")");
+          pc := !pc + 3;
+          exit 1
       | '\xb8' (*invokestatic*) ->
           let _idx = String.get_uint16_be code (!pc + 1) in
           let cidx, ntidx =
