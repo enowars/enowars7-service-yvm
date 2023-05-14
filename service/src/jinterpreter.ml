@@ -49,6 +49,21 @@ let run (c_cls : Jparser.ckd_class) =
           Stack.push (a + b) stack;
           pc := !pc + 1
       | '\xb1' (*return*) -> halt := true
+      | '\xb2' (*getstatic*) ->
+          let idx = get_u2 code pc in
+          let klass, (name, jtype) =
+            match c_cls.ckd_cp.(idx) with
+            | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
+            | _ -> failwith "expected field"
+          in
+          let f = Classpool.get_field pool klass (name, jtype) in
+          let v =
+            match !f with
+            | Jparser.Int i -> i
+            | _ -> failwith "only int implemented"
+          in
+          Stack.push (Int32.to_int v) stack;
+          pc := !pc + 3
       | '\xb3' (*putstatic*) ->
           let idx = get_u2 code pc in
           let klass, (name, jtype) =
