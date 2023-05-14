@@ -55,7 +55,9 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
           let b = Stack.pop stack in
           Stack.push (a + b) stack;
           pc := !pc + 1
-      | '\xb1' (*return*) -> halt := true
+      | '\xb1' (*return*) ->
+          if name = "main" then pool |> Classpool.show |> print_endline else ();
+          halt := true
       | '\xb2' (*getstatic*) ->
           let idx = get_u2 code pc in
           let klass, (name, jtype) =
