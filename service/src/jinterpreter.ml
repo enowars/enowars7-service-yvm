@@ -18,6 +18,9 @@ let run (c_cls : Jparser.ckd_class) =
     let opcode = code.[!pc] in
     let () =
       match opcode with
+      | '\x04' (*iconst_1*) ->
+          Stack.push 1 stack;
+          pc := !pc + 1
       | '\x08' (*iconst_5*) ->
           Stack.push 5 stack;
           pc := !pc + 1
