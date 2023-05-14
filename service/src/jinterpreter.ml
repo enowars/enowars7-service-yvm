@@ -41,6 +41,11 @@ let run (c_cls : Jparser.ckd_class) =
       | '\x3c' (*istore_1*) ->
           locals.(1) <- Stack.pop stack;
           pc := !pc + 1
+      | '\x60' (*iadd*) ->
+          let a = Stack.pop stack in
+          let b = Stack.pop stack in
+          Stack.push (a + b) stack;
+          pc := !pc + 1
       | '\xb3' (*putstatic*) ->
           let idx = get_u2 code pc in
           let klass, (name, jtype) =
