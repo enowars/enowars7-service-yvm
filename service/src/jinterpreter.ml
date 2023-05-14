@@ -1,4 +1,4 @@
-let run (c_cls : Jparser.ckd_class) (name, jtype) =
+let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
     match List.assoc_opt (name, jtype) c_cls.meths with
     | Some main -> main
@@ -14,6 +14,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
     let b2 = code.[!pc + 2] |> Char.code in
     b1 lor b2
   in
+  let get_field = Classpool.get_field run in
   let halt = ref false in
   while not !halt do
     let opcode = code.[!pc] in
@@ -65,7 +66,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
             | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
             | _ -> failwith "expected field"
           in
-          let f = Classpool.get_field pool klass (name, jtype) in
+          let f = get_field pool klass (name, jtype) in
           let v =
             match !f with
             | Jparser.Int i -> i
@@ -80,7 +81,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
             | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
             | _ -> failwith "expected field"
           in
-          let f = Classpool.get_field pool klass (name, jtype) in
+          let f = get_field pool klass (name, jtype) in
           let v =
             match jtype with
             | "I" -> Jparser.Int (Stack.pop stack |> Int32.of_int)
