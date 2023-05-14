@@ -32,6 +32,14 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
       | '\x11' (*sipush*) ->
           Stack.push (get_u2 code pc) stack;
           pc := !pc + 3
+      | '\x12' (*ldc*) ->
+          let idx = code.[!pc + 1] |> Char.code in
+          let () =
+            match c_cls.constant_pool.(idx) with
+            | C_Integer i -> Stack.push (Int32.to_int i) stack
+            | _ -> failwith "foo"
+          in
+          pc := !pc + 2
       | '\x19' (*aload*) ->
           let lidx = code.[!pc + 1] |> Char.code in
           Stack.push locals.(lidx) stack;
