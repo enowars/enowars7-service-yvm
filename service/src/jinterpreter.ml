@@ -71,9 +71,14 @@ let run (c_cls : Jparser.ckd_class) =
             | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
             | _ -> failwith "expected field"
           in
-          print_endline (klass ^ " (" ^ name ^ ", " ^ jtype ^ ")");
-          pc := !pc + 3;
-          exit 1
+          let f = Classpool.get_field pool klass (name, jtype) in
+          let v =
+            match jtype with
+            | "I" -> Jparser.Int (Stack.pop stack |> Int32.of_int)
+            | _ -> failwith "yaoawhfahw"
+          in
+          f := v;
+          pc := !pc + 3
       | '\xb8' (*invokestatic*) ->
           let _idx = String.get_uint16_be code (!pc + 1) in
           let cidx, ntidx =
