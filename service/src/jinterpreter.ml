@@ -1,6 +1,6 @@
-let run (c_cls : Jparser.ckd_class) =
+let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
-    match List.assoc_opt ("main", "([Ljava/lang/String;)V") c_cls.meths with
+    match List.assoc_opt (name, jtype) c_cls.meths with
     | Some main -> main
     | None -> failwith "no main Method present"
   in
