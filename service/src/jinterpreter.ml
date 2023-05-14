@@ -9,12 +9,14 @@ let run (c_cls : Jparser.ckd_class) =
   let stack = Stack.create () in
   let locals = Array.make main.max_locals 0 in
   let cp = c_cls.constant_pool in
+  let pool = ref [ (c_cls.name, c_cls) ] in
   let get_u2 code pc =
     let b1 = (code.[!pc + 1] |> Char.code) lsl 8 in
     let b2 = code.[!pc + 2] |> Char.code in
     b1 lor b2
   in
-  while true do
+  let halt = ref false in
+  while not !halt do
     let opcode = code.[!pc] in
     let () =
       match opcode with
@@ -46,6 +48,7 @@ let run (c_cls : Jparser.ckd_class) =
           let b = Stack.pop stack in
           Stack.push (a + b) stack;
           pc := !pc + 1
+      | '\xb1' (*return*) -> halt := true
       | '\xb3' (*putstatic*) ->
           let idx = get_u2 code pc in
           let klass, (name, jtype) =
