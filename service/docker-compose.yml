@@ -1,0 +1,10 @@
+version: '3'
+services:
+  yvm:
+    build: .
+    volumes:
+      - ./classes:/var/www/html/classes
+    hostname: yvm
+    container_name: yvm-service
+    ports:
+      - 3165:80
