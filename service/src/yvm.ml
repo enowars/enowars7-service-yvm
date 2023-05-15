@@ -1,7 +1,14 @@
 open Yvm_lib
 
 let () =
-  let r_cls = Jparser.parse_class "Foo.class" in
+  let klass =
+    match Sys.argv with
+    | [| _; klass |] ->
+        if String.ends_with ~suffix:".class" klass then klass
+        else failwith "file doesn't end with '.class'"
+    | _ -> failwith "expecting a single class file as arg"
+  in
+  let r_cls = Jparser.parse_class klass in
   Jparser.show_raw_class r_cls |> print_endline;
   Array.iteri
     (fun i el ->
