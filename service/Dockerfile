@@ -22,5 +22,6 @@ WORKDIR /var/www/html
 COPY --from=build /build/result/bin/yvm .
 RUN chown www-data:www-data yvm
 RUN mkdir -m 777 classes
+RUN rm index.nginx-debian.html
 COPY index.html .
 COPY runner.php .
