@@ -18,6 +18,7 @@ if ($uploadOk == 0) {
     echo "<p>The file ". htmlspecialchars($filename). " has been uploaded.</p>";
 
     echo "<pre>";
+    // TODO make getflag work
     echo shell_exec("cd classes; ../yvm " . $filename);
     echo "</pre>";
   } else {
