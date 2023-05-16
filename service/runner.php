@@ -17,7 +17,9 @@ if ($uploadOk == 0) {
   if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
     echo "<p>The file ". htmlspecialchars($filename). " has been uploaded.</p>";
 
+    echo "<pre>";
     echo shell_exec("cd classes; ../yvm " . $filename);
+    echo "</pre>";
   } else {
     echo "<p>Sorry, there was an error uploading your file.</p>";
   }
