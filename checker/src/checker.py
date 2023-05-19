@@ -94,17 +94,25 @@ async def getflag_test(
 
     r = await client.get(f"/runner.php?replay_id={token}")
     assert_equals(r.status_code, 200, "getting note with flag failed")
-    print()
-    print()
-    print()
-    print(r)
-    print(r.text)
-    print()
-    print()
-    print()
 
-    # TODO ints_to_flag
-    assert_in(task.flag, r.text, "flag missing from note")
+    if m := re.search(
+        r'\(\("secret_length", "I"\), ref \(\(Jparser.Int (\d*)l\)\)\)', r.text
+    ):
+        length = int(m.group(1))
+    else:
+        raise MumbleException("could not find secret_length in output")
+
+    # [("1", "123"), ("2", "-456"), ...]
+    matches = re.findall(
+        r'\("secret_(\d*)", "I"\), ref \(\(Jparser.Int (-?\d*)l\)\)\)', r.text
+    )
+    matches = [(int(i), int(v)) for i, v in matches]
+
+    # sort by index
+    ints = sorted(matches, key=lambda e: e[0])
+    ints = [v for _, v in ints]
+
+    assert_equals(task.flag, ints_to_flag(ints, length), "flag not found")
 
 
 @checker.exploit(0)
