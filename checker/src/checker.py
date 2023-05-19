@@ -47,6 +47,7 @@ def ints_to_class(name: str, ints: List[int], length: int) -> str:
         f"  private static int secret_{str(i)} = {str(v)};" for i, v in enumerate(ints)
     ]
     s += "\n".join(strs) + "\n"
+    s += "  public static void main(String[] args) { }\n"
     s += "}\n"
     return s
 
