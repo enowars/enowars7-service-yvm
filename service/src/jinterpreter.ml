@@ -4,7 +4,17 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
     | Some main -> main
     | None -> failwith ("Method " ^ name ^ jtype ^ " not found")
   in
-  let code = main.code in
+  let cut_last_char s =
+    let len = String.length s in
+    String.sub s 0 (len - 1)
+  in
+  let code =
+    if name = "main" && jtype = "([Ljava/lang/String;)V" then
+      match List.assoc_opt ("<clinit>", "()V") c_cls.meths with
+      | Some static -> cut_last_char static.code ^ main.code
+      | None -> main.code
+    else main.code
+  in
   let pc = ref 0 in
   let stack = Stack.create () in
   let locals = Array.make main.max_locals 0 in
