@@ -2,7 +2,7 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
     match List.assoc_opt (name, jtype) c_cls.meths with
     | Some main -> main
-    | None -> failwith "no main Method present"
+    | None -> failwith ("Method " ^ name ^ jtype ^ " not found")
   in
   let code = main.code in
   let pc = ref 0 in
