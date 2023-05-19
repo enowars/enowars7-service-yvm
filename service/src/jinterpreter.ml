@@ -38,7 +38,7 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
           let () =
             match c_cls.constant_pool.(idx) with
             | C_Integer i -> Stack.push (Int32.to_int i) stack
-            | _ -> failwith "foo"
+            | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
           in
           pc := !pc + 2
       | '\x19' (*aload*) ->
