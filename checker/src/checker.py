@@ -74,14 +74,6 @@ async def putflag_test(
 
     os.remove(f"{class_name}.java")
     os.remove(f"{class_name}.class")
-    print()
-    print()
-    print()
-    print(r)
-    print(r.text)
-    print()
-    print()
-    print()
     assert_equals(r.status_code, 200, "storing class with flag failed")
     m = re.search(r"href='runner.php\?replay_id=(.*?)'", r.text)
 
