@@ -74,10 +74,13 @@ async def putflag_test(
 
     os.remove(f"{class_name}.java")
     os.remove(f"{class_name}.class")
-    assert_equals(r.status_code, 200, "storing class with flag failed")
-    m = re.search(r"href='runner.php\?replay_id=(.*?)'", r.text)
 
-    await db.set("replay_id", m.group(1))
+    assert_equals(r.status_code, 200, "storing class with flag failed")
+
+    if m := re.search(r"href='runner.php\?replay_id=(.*?)'", r.text):
+        await db.set("replay_id", m.group(1))
+    else:
+        raise MumbleException("No replay_id returned by service")
 
 
 @checker.getflag(0)
