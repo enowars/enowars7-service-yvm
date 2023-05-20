@@ -41,11 +41,17 @@ def ints_to_flag(ints: List[int], length: int) -> str:
     return b[:length].decode()
 
 
-def ints_to_class(name: str, ints: List[int], length: int) -> str:
+def ints_to_class(name: str, ints: List[int], length: int, private: bool) -> str:
+    if private:
+        acc_lvl = "private"
+    else:
+        acc_lvl = "public"
+
     s = "class " + name + " {\n"
-    s += f"  private static int secret_length = {str(length)};\n"
+    s += f"  {acc_lvl} static int secret_length = {length};\n"
     strs = [
-        f"  private static int secret_{str(i)} = {str(v)};" for i, v in enumerate(ints)
+        f"   {acc_lvl} static int secret_{str(i)} = {str(v)};"
+        for i, v in enumerate(ints)
     ]
     s += "\n".join(strs) + "\n"
     s += "  public static void main(String[] args) { }\n"
@@ -67,7 +73,7 @@ async def putflag_test(
     class_name = gen_name()
 
     l, ints = flag_to_ints(task.flag)
-    class_body = ints_to_class(class_name, ints, l)
+    class_body = ints_to_class(class_name, ints, l, True)
 
     with open(f"{class_name}.java", "w") as f:
         f.write(class_body)
