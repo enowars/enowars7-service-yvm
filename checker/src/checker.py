@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import secrets
@@ -83,6 +84,7 @@ async def putflag_test(
 
     if m := re.search(r"href='runner.php\?replay_id=(.*?)'", r.text):
         await db.set("replay_id", m.group(1))
+        return json.dumps({"no_ints": len(ints), "class_name": class_name})
     else:
         raise MumbleException("No replay_id returned by service")
 
