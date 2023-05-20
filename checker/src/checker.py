@@ -52,14 +52,18 @@ def ints_to_class(name: str, ints: List[int], length: int) -> str:
     return s
 
 
+def gen_name() -> str:
+    return "".join(secrets.choice(string.ascii_uppercase) for i in range(5))
+
+
 @checker.putflag(0)
 async def putflag_test(
     task: PutflagCheckerTaskMessage,
     logger: LoggerAdapter,
     client: AsyncClient,
     db: ChainDB,
-) -> None:
-    class_name = "".join(secrets.choice(string.ascii_uppercase) for i in range(5))
+) -> str:
+    class_name = gen_name()
 
     l, ints = flag_to_ints(task.flag)
     class_body = ints_to_class(class_name, ints, l)
