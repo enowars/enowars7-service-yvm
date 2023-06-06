@@ -1,5 +1,8 @@
 # TODO
 
+- [ ] fixing patch
+- [ ] cleanup of old flags
+
 ## Implementation State
 
 The `yvm`  currently supports the following instructions of the ~170
