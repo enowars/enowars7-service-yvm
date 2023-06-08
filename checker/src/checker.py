@@ -61,7 +61,7 @@ def ints_to_class(name: str, ints: List[int], length: int, private: bool) -> str
 
 
 def gen_name() -> str:
-    return "".join(secrets.choice(string.ascii_uppercase) for i in range(5))
+    return "".join(secrets.choice(string.ascii_uppercase) for i in range(10))
 
 
 @checker.putflag(0)
