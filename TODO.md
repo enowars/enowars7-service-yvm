@@ -1,6 +1,9 @@
 # TODO
 
 - [ ] fixing patch
+    - pipeline for `fixed`
+    - local hook?
+- [ ] checker CPU surge
 - [ ] cleanup of old flags
 
 ## Implementation State
