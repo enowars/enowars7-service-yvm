@@ -36,14 +36,14 @@ adding more instructions, so I have less code to refactor.
 1. add low-effort instructions (e.g. `imul`, the missing `iconst_<n>`, etc.).
 1. Method calling/stack.
 1. `printInt`, `printChar`
-  - change service output from _internal state dump_ to _interpreter stdout_.
-    This could add a cool mitigation: simply disallow printing of flags.
-    (which could be avoided by "encrypting" flag, printing, "decrypting",
-    submitting.
+    - change service output from _internal state dump_ to _interpreter stdout_.
+      This could add a cool mitigation: simply disallow printing of flags.
+      (which could be avoided by "encrypting" flag, printing, "decrypting",
+      submitting.
 1. disk I/O
-  - potential 2nd flag store: files created by other yvm invocations.
-    Maybe implement in such a way that a simple permission system would have to
-    be added.
+    - potential 2nd flag store: files created by other yvm invocations. Maybe
+      implement in such a way that a simple permission system would have to be
+      added.
 
 I'm unsure how difficult implementing Arrays (use case: Strings) would be.
 But they aren't required for the current plan (e.g. char by char disk I/O)
