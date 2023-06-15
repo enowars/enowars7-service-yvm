@@ -37,13 +37,11 @@ if (isset($_GET[REPLAY_KEY])) {
       }
     }
   }
-  echo "<p>Sorry, unknown replay_id.</p>";
-  die;
+  die("<p>Sorry, unknown replay_id.</p>");
 }
 
 if (!isset($_FILES["fileToUpload"])) {
-  echo "<p>Sorry, expecting file upload.</p>";
-  die;
+  die("<p>Sorry, expecting file upload.</p>");
 }
 
 $target_dir = "classes/";
@@ -52,26 +50,25 @@ $target_file = $target_dir . $filename;
 
 $regex = "/[A-Za-z]+\.class/";
 if (!preg_match($regex, $filename)) {
-  echo "<p>Sorry, expecting filename that matches $regex.</p>";
-  die;
+  die("<p>Sorry, expecting filename that matches $regex.</p>");
 }
 
 // Check if file already exists
 if (file_exists($target_file)) {
-  echo "<p>Sorry, file already exists.</p>";
-  die;
+  die("<p>Sorry, file already exists.</p>");
 }
 
 if (!move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-  echo "<p>Sorry, there was an error uploading your file.</p>";
+  die("<p>Sorry, there was an error uploading your file.</p>");
 }
 
 echo "<p>The file " . $filename . " has been uploaded.</p>";
 
 $id = uniqid();
+if(!file_put_contents(REPLAY_FILE, "$id $filename\n", FILE_APPEND | LOCK_EX)) {
+  die("error writing replay file!");
+}
 echo "<p>You can replay the file via the replay_id <a href='runner.php?" . REPLAY_KEY . "=$id'>$id</a>.</p>";
-
-file_put_contents(REPLAY_FILE, "$id $filename\n", FILE_APPEND | LOCK_EX);
 
 run_file($filename);
 ?>
