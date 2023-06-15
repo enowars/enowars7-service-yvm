@@ -1,0 +1,10 @@
+(test
+ (name getstatic_putstatic)
+ (libraries yvm_lib)
+ (deps Foo.class Bar.class))
+
+(rule
+ (deps Foo.java Bar.java)
+ (targets Foo.class Bar.class)
+ (action
+  (run javac Foo.java)))
