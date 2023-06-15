@@ -1,10 +1,7 @@
 # TODO
 
-- [ ] fixing patch
-    - pipeline for `fixed`
-    - local hook?
-- [ ] checker CPU surge
-- [ ] cleanup of old flags
+- pipeline for `fixed`
+- Refactor checker to not use `javac`
 
 ## Implementation State
 

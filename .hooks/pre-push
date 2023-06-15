@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+# based on git's pre-commit.sample
+
+# Redirect output to stderr.
+exec 1>&2
+
+fixed=$(git rev-parse fixed^)
+main=$(git rev-parse main)
+
+if [ "$fixed" != "$main" ]
+then
+	echo please rebase fixed onto main.
+	exit 1
+fi
