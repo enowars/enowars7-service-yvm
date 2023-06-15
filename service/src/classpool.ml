@@ -14,7 +14,11 @@ let rec get_field run_callback (t : t) (klass : string) (nat : string * string)
         Jparser.parse_class (klass ^ ".class") |> Jparser.cook_class
       in
       t := (klass, ckd_cls) :: !t;
-      run_callback ckd_cls ("<clinit>", "()V");
+      let () =
+        match List.assoc_opt ("<clinit>", "()V") ckd_cls.meths with
+        | Some _ -> run_callback ckd_cls ("<clinit>", "()V")
+        | None -> ()
+      in
       get_field run_callback t klass nat
 
 let show (t : t) =
