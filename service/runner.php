@@ -1,11 +1,27 @@
 <?php
 
 function run_file($filename) {
-  echo "<p>yvm output:</p>";
+  $filename = trim($filename);
 
+  shell_exec("cd classes; ../yvm $filename > out 2> err");
+
+  echo "<figure>";
+  echo "<figcaption>stdout</figcaption>";
   echo "<pre>";
-  echo shell_exec("cd classes; ../yvm $filename");
+  echo "<code spellcheck='false'>";
+  echo file_get_contents("classes/out");
+  echo "</code>";
   echo "</pre>";
+  echo "</figure>";
+
+  echo "<figure>";
+  echo "<figcaption>stderr</figcaption>";
+  echo "<pre>";
+  echo "<code spellcheck='false'>";
+  echo file_get_contents("classes/err");
+  echo "</code>";
+  echo "</pre>";
+  echo "</figure>";
 }
 
 const REPLAY_FILE = "classes/replay.tsv";
