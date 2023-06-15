@@ -1,10 +1,10 @@
 FROM nixos/nix as build
 WORKDIR /build
 RUN nix-env -iA nixpkgs.patchelf
-COPY flake.nix  flake.nix
-COPY flake.lock flake.lock
+COPY flake.nix  .
+COPY flake.lock .
 RUN nix --extra-experimental-features flakes --extra-experimental-features nix-command build || true
-COPY dune-project dune-project
+COPY dune-project .
 COPY src src
 RUN nix --extra-experimental-features flakes --extra-experimental-features nix-command build
 RUN patchelf --set-interpreter "/lib64/ld-linux-x86-64.so.2" ./result/bin/yvm
