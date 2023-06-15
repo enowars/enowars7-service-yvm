@@ -13,8 +13,10 @@ from enochecker3 import (
     Enochecker,
     ExploitCheckerTaskMessage,
     GetflagCheckerTaskMessage,
+    GetnoiseCheckerTaskMessage,
     MumbleException,
     PutflagCheckerTaskMessage,
+    PutnoiseCheckerTaskMessage,
 )
 from enochecker3.utils import FlagSearcher, assert_equals, assert_in
 from httpx import AsyncClient
@@ -168,3 +170,77 @@ async def exploit_test(
     os.remove(f"{explt_name}.class")
 
     return reconstruct_flag(r.text)
+
+
+@checker.putnoise(0)
+async def putnoise_access_public(
+    task: PutnoiseCheckerTaskMessage,
+    logger: LoggerAdapter,
+    client: AsyncClient,
+    db: ChainDB,
+) -> None:
+    class_name = gen_name()
+
+    secret = gen_name()
+    l, ints = flag_to_ints(secret)
+    class_body = ints_to_class(class_name, ints, l, False)
+
+    with open(f"{class_name}.java", "w") as f:
+        f.write(class_body)
+
+    subprocess.run(["javac", f"{class_name}.java"], check=True)
+
+    files = {"fileToUpload": open(f"{class_name}.class", "rb")}
+    r = await client.post("/runner.php", files=files)
+
+    os.remove(f"{class_name}.java")
+    os.remove(f"{class_name}.class")
+
+    assert_equals(r.status_code, 200, "storing class with flag failed")
+
+    await db.set(
+        "noise_info", {"class_name": class_name, "no_ints": l, "secret": secret}
+    )
+
+
+@checker.getnoise(0)
+async def getnoise_access_public(
+    task: GetnoiseCheckerTaskMessage,
+    logger: LoggerAdapter,
+    client: AsyncClient,
+    db: ChainDB,
+) -> None:
+    try:
+        info = await db.get("noise_info")
+    except KeyError:
+        raise MumbleException("database info missing")
+    no_of_fields = info["no_ints"]
+    victm_name = info["class_name"]
+    secret = info["secret"]
+
+    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, False)
+
+    explt_name = "NOISE_" + gen_name()
+
+    expltr = "class " + explt_name + " {\n"
+    expltr += "  public static void main(String[] args) {\n"
+    expltr += "    int result = " + victm_name + ".secret_length;\n"
+    expltr += "  }\n"
+    expltr += "}\n"
+
+    with open(f"{victm_name}.java", "w") as f:
+        f.write(victim)
+    with open(f"{explt_name}.java", "w") as f:
+        f.write(expltr)
+
+    subprocess.run(["javac", f"{explt_name}.java"], check=True)
+
+    files = {"fileToUpload": open(f"{explt_name}.class", "rb")}
+    r = await client.post("/runner.php", files=files)
+
+    os.remove(f"{victm_name}.java")
+    os.remove(f"{victm_name}.class")
+    os.remove(f"{explt_name}.java")
+    os.remove(f"{explt_name}.class")
+
+    assert_equals(reconstruct_flag(r.text), secret, "noise not found")
