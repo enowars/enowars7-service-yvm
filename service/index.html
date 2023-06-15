@@ -7,11 +7,21 @@
 	</head>
 	<body>
 		<header>
-			<h1>Put classfile.</h1>
+			<h1>Welcome to yvm, the questionable JVM.</h1>
 		</header>
 		<main>
+			<p>Yvm executes (some) JVM bytecode.</p>
+			<h2>Yvm Features:</h2>
+
+			<ul>
+				<li>Supports Integers. Who needs more than bits anyway?.</li>
+				<li>Supports code in <code>static</code> block and <code>main</code>. Who needs calling methods anyway?</li>
+				<li>Supports 12 bytecode instructions. Who needs <code>dup2_x2</code> anyway?</li>
+				<li>Supports dumping the interpreter state at end of execution. Who needs more I/O anyway?</li>
+			</ul>
+
 			<form action="runner.php" method="post" enctype="multipart/form-data">
-				<label for="fileToUpload">Select file to upload:</label>
+				<label for="fileToUpload">Select classfile to upload:</label>
 				<input type="file" name="fileToUpload" id="fileToUpload" accept=".class">
 				<input type="submit" value="Upload file" name="submit">
 			</form>
