@@ -116,7 +116,7 @@ type ckd_class = {
   constant_pool : constant array;
   ckd_cp : ckd_constant array;
   meths : ((string * string) * meth) list;
-  fields : ((string * string) * primType ref) list;
+  fields : ((string * string) * (access_flag option * primType ref)) list;
 }
 [@@deriving show]
 
@@ -349,8 +349,9 @@ let cook_cp_entry (cp : constant array) (cp_entry : constant) =
 let cook_field cp (raw_field : field_info) =
   let name = rslv_name cp raw_field.name_index in
   let dscr = rslv_name cp raw_field.descriptor_index in
+  let acc = raw_field.access_flags in
   match dscr with
-  | "I" -> ((name, dscr), ref (Int 1337l))
+  | "I" -> ((name, dscr), (acc, ref (Int 1337l)))
   | s -> "unsupported field type " ^ s |> failwith
 
 let cook_meth cp raw_meth =
