@@ -81,9 +81,6 @@ type method_info = {
 }
 [@@deriving show]
 
-type frame = { locals : primType list; operand_stack : primType list }
-type foo = { pc : int; stack : frame list }
-
 type raw_class = {
   version : int * int;
   constant_pool : constant array;
