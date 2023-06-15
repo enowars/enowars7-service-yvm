@@ -17,7 +17,7 @@ class Foo {
     }
 
     public static void main(String[] args) {
-        int x = 1 + 13;
+        int x = 3 ;
         int y = getMyInt();
         System.out.println(x + ", " + y);
 	Foo f = new Foo();
