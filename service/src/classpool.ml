@@ -2,12 +2,12 @@ type pool_entry = Method of Jparser.meth | Int of int
 type klass = Jparser.ckd_class
 type t = (string * klass) list ref
 
-let rec get_field run_callback (t : t) (klass : string) (nat : string * string)
-    =
+let rec get_field run_callback (t : t) (caller : string) (klass : string)
+    (nat : string * string) =
   match List.assoc_opt klass !t with
   | Some kpool -> (
       match List.assoc_opt nat kpool.fields with
-      | Some entry -> entry
+      | Some (_, entry) -> entry
       | None -> failwith "invalid nat into loaded class")
   | None ->
       let ckd_cls =
@@ -19,7 +19,7 @@ let rec get_field run_callback (t : t) (klass : string) (nat : string * string)
         | Some _ -> run_callback ckd_cls ("<clinit>", "()V")
         | None -> ()
       in
-      get_field run_callback t klass nat
+      get_field run_callback t caller klass nat
 
 let show (t : t) =
   List.map

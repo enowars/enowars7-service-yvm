@@ -100,7 +100,7 @@ async def putflag_test(
 
 def reconstruct_flag(text: str) -> str:
     if m := re.search(
-        r'\(\("secret_length", "I"\), ref \(\(Jparser.Int (\d*)l\)\)\)', text
+        r'\(\("secret_length", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.Int (\d*)l\)\)\)', text
     ):
         length = int(m.group(1))
     else:
@@ -108,7 +108,7 @@ def reconstruct_flag(text: str) -> str:
 
     # [("1", "123"), ("2", "-456"), ...]
     matches = re.findall(
-        r'\("secret_(\d*)", "I"\), ref \(\(Jparser.Int (-?\d*)l\)\)\)', text
+        r'\("secret_(\d*)", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.Int (-?\d*)l\)\)\)', text
     )
     matches = [(int(i), int(v)) for i, v in matches]
 

@@ -73,7 +73,7 @@ let step state get_field =
           | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
           | _ -> failwith "expected field"
         in
-        let f = get_field pool klass (name, jtype) in
+        let f = get_field pool c_cls.name klass (name, jtype) in
         let v =
           match !f with
           | Jparser.Int i -> i
@@ -88,7 +88,7 @@ let step state get_field =
           | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
           | _ -> failwith "expected field"
         in
-        let f = get_field pool klass (name, jtype) in
+        let f = get_field pool c_cls.name klass (name, jtype) in
         let v =
           match jtype with
           | "I" -> Jparser.Int (Stack.pop stack |> Int32.of_int)
