@@ -1,8 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
-chmod 777 /var/www/html/classes
+set -e
 
-/etc/init.d/nginx start
-/etc/init.d/php8.1-fpm start
+chown www-data:www-data /var/www/html/classes
 
-tail -f /var/log/nginx/error.log
+exec php-fpm
