@@ -3,13 +3,32 @@
 function run_file($filename) {
   $filename = trim($filename);
 
-  shell_exec("cd classes; ../yvm $filename > out 2> err");
+  $fd_spec = array(
+     1 => array("pipe", "w"),
+     2 => array("pipe", "w"),
+  );
+
+  $process = proc_open(array("../yvm", $filename) , $fd_spec, $pipes, getcwd() . "/classes");
+
+  if (!is_resource($process)) {
+    die ("could not open process");
+  }
+
+  $stdout = stream_get_contents($pipes[1]);
+  $stderr = stream_get_contents($pipes[2]);
+
+  fclose($pipes[1]);
+  fclose($pipes[2]);
+
+  $return_value = proc_close($process);
+
+  echo "<p>Ran $filename with vm exit code <code>$return_value</code>.</p>";
 
   echo "<figure>";
   echo "<figcaption>stdout</figcaption>";
   echo "<pre>";
   echo "<code spellcheck='false'>";
-  echo file_get_contents("classes/out");
+  echo $stdout;
   echo "</code>";
   echo "</pre>";
   echo "</figure>";
@@ -18,7 +37,7 @@ function run_file($filename) {
   echo "<figcaption>stderr</figcaption>";
   echo "<pre>";
   echo "<code spellcheck='false'>";
-  echo file_get_contents("classes/err");
+  echo $stderr;
   echo "</code>";
   echo "</pre>";
   echo "</figure>";
