@@ -59,6 +59,7 @@ if (file_exists($target_file)) {
 }
 
 if (!move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
+  error_log("<p>Sorry, there was an error uploading your file.</p>");
   die("<p>Sorry, there was an error uploading your file.</p>");
 }
 
@@ -66,6 +67,7 @@ echo "<p>The file " . $filename . " has been uploaded.</p>";
 
 $id = uniqid();
 if(!file_put_contents(REPLAY_FILE, "$id $filename\n", FILE_APPEND | LOCK_EX)) {
+  error_log("error writing replay file!");
   die("error writing replay file!");
 }
 echo "<p>You can replay the file via the replay_id <a href='runner.php?" . REPLAY_KEY . "=$id'>$id</a>.</p>";
