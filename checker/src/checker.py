@@ -121,7 +121,10 @@ def reconstruct_flag(text: str) -> str:
 
 @checker.getflag(0)
 async def getflag_test(
-    task: GetflagCheckerTaskMessage, client: AsyncClient, db: ChainDB
+    task: GetflagCheckerTaskMessage,
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    db: ChainDB
 ) -> None:
     try:
         token = await db.get("replay_id")
@@ -130,7 +133,16 @@ async def getflag_test(
 
     r = await client.get(f"/runner.php?replay_id={token}")
     assert_equals(r.status_code, 200, "getting note with flag failed")
-    assert_equals(reconstruct_flag(r.text), task.flag, "flag not found")
+    found = reconstruct_flag(r.text)
+    expct = task.flag
+    if found != expct:
+        logger.error("flag not found")
+        logger.error("replay_id " + token)
+        logger.error("response body " + r.text)
+        logger.error("found '" + found + "'")
+        logger.error("expected '" + expct + "'")
+
+    assert_equals(found, expct, "flag not found")
 
 
 @checker.exploit(0)
