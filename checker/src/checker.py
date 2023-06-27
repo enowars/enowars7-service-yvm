@@ -55,16 +55,24 @@ def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> byte
         ValueError("acc_level must be 'private' or 'public'")
 
     data = data.replace(TMPL_NAME.encode(), name.encode())
-    data = data.replace(int.to_bytes(TMPL_LENGTH, length=4, byteorder="big"), int.to_bytes(length, length=4, byteorder="big", signed=True))
+    data = data.replace(
+        int.to_bytes(TMPL_LENGTH, length=4, byteorder="big"),
+        int.to_bytes(length, length=4, byteorder="big", signed=True),
+    )
 
     for i, v in enumerate(ints):
-        data = data.replace(int.to_bytes(TMPL_VALS_I + i, length=4, byteorder="big"), int.to_bytes(v, length=4, byteorder="big", signed=True))
+        data = data.replace(
+            int.to_bytes(TMPL_VALS_I + i, length=4, byteorder="big"),
+            int.to_bytes(v, length=4, byteorder="big", signed=True),
+        )
 
     return data
 
 
-def gen_class_template(name: str, ints: Iterable[int], length: int, acc_lvl: str) -> str:
-    assert acc_lvl in [ "private", "public" ]
+def gen_class_template(
+    name: str, ints: Iterable[int], length: int, acc_lvl: str
+) -> str:
+    assert acc_lvl in ["private", "public"]
 
     s = "class " + name + " {\n"
     s += f"  {acc_lvl} static int secret_length = {hex(length)};\n"
@@ -113,7 +121,8 @@ async def putflag_test(
 
 def reconstruct_flag(text: str) -> str:
     if m := re.search(
-        r'\(\("secret_length", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.Int (\d*)l\)\)\)', text
+        r'\(\("secret_length", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.Int (\d*)l\)\)\)',
+        text,
     ):
         length = int(m.group(1))
     else:
@@ -121,7 +130,8 @@ def reconstruct_flag(text: str) -> str:
 
     # [("1", "123"), ("2", "-456"), ...]
     matches = re.findall(
-        r'\("secret_(\d*)", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.Int (-?\d*)l\)\)\)', text
+        r'\("secret_(\d*)", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.Int (-?\d*)l\)\)\)',
+        text,
     )
     matches = [(int(i), int(v)) for i, v in matches]
 
@@ -137,7 +147,7 @@ async def getflag_test(
     task: GetflagCheckerTaskMessage,
     client: AsyncClient,
     logger: LoggerAdapter,
-    db: ChainDB
+    db: ChainDB,
 ) -> None:
     try:
         token = await db.get("replay_id")
@@ -208,9 +218,7 @@ async def putnoise_access_public(
 
     assert_equals(r.status_code, 200, "storing class with flag failed")
 
-    await db.set(
-        "noise_info", {"class_name": class_name, "secret": secret}
-    )
+    await db.set("noise_info", {"class_name": class_name, "secret": secret})
 
 
 @checker.getnoise(0)
@@ -246,25 +254,29 @@ async def getnoise_access_public(
 
 l = 20
 TMPL_NAME = "A" * NAME_LENGTH
-TMPL_LENGTH = 0xfefefefe
-TMPL_VALS_I = 0xdeadbeef
-cls = gen_class_template(TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "private")
+TMPL_LENGTH = 0xFEFEFEFE
+TMPL_VALS_I = 0xDEADBEEF
+cls = gen_class_template(
+    TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "private"
+)
 with open("FooFoo.java", "w") as f:
     f.write(cls)
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{TMPL_NAME}.class", "rb") as f: # type: ignore
-    private_class: bytes = f.read() # type: ignore
+with open(f"{TMPL_NAME}.class", "rb") as f:  # type: ignore
+    private_class: bytes = f.read()  # type: ignore
 
-cls = gen_class_template(TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "public")
+cls = gen_class_template(
+    TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "public"
+)
 with open("FooFoo.java", "w") as f:  # type: ignore
-    f.write(cls) # type: ignore
+    f.write(cls)  # type: ignore
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
 with open(f"{TMPL_NAME}.class", "rb") as f:  # type: ignore
-    public_class: bytes = f.read() # type: ignore
+    public_class: bytes = f.read()  # type: ignore
 
 
 TMPL_VCTM = "V" * NAME_LENGTH
@@ -288,5 +300,5 @@ with open(f"FooFoo.java", "w") as f:
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{TMPL_ACCS}.class", "rb") as f: # type: ignore
-    accessing_class: bytes = f.read() # type: ignore
+with open(f"{TMPL_ACCS}.class", "rb") as f:  # type: ignore
+    accessing_class: bytes = f.read()  # type: ignore
