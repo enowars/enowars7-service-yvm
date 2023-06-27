@@ -21,6 +21,8 @@ from enochecker3 import (
 from enochecker3.utils import FlagSearcher, assert_equals, assert_in
 from httpx import AsyncClient
 
+NAME_LENGTH = 10
+
 checker = Enochecker("Yvm", 3165)
 app = lambda: checker.app
 
@@ -63,7 +65,7 @@ def ints_to_class(name: str, ints: List[int], length: int, private: bool) -> str
 
 
 def gen_name() -> str:
-    return "".join(secrets.choice(string.ascii_uppercase) for i in range(10))
+    return "".join(secrets.choice(string.ascii_uppercase) for i in range(NAME_LENGTH))
 
 
 @checker.putflag(0)
