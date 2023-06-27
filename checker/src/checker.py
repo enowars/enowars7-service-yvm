@@ -6,7 +6,7 @@ import string
 import subprocess
 from itertools import zip_longest
 from logging import LoggerAdapter
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from enochecker3 import (
     ChainDB,
@@ -52,7 +52,7 @@ def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> byte
     elif acc_lvl == "public":
         data = public_class
     else:
-        raise "foo"
+        ValueError("acc_level must be 'private' or 'public'")
 
     data = data.replace(TMPL_NAME.encode(), name.encode())
     data = data.replace(int.to_bytes(TMPL_LENGTH, length=4, byteorder="big"), int.to_bytes(length, length=4, byteorder="big", signed=True))
@@ -63,7 +63,7 @@ def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> byte
     return data
 
 
-def gen_class_template(name: str, ints: List[int], length: int, acc_lvl: str) -> str:
+def gen_class_template(name: str, ints: Iterable[int], length: int, acc_lvl: str) -> str:
     assert acc_lvl in [ "private", "public" ]
 
     s = "class " + name + " {\n"
@@ -166,6 +166,7 @@ async def exploit_test(
     client: AsyncClient,
 ) -> Optional[str]:
     victm_name = task.attack_info
+    assert victm_name
 
     explt_name = "E_" + gen_name()[:8]
 
@@ -253,17 +254,17 @@ with open("FooFoo.java", "w") as f:
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{TMPL_NAME}.class", "rb") as f:
-    private_class = f.read()
+with open(f"{TMPL_NAME}.class", "rb") as f: # type: ignore
+    private_class: bytes = f.read() # type: ignore
 
 cls = gen_class_template(TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "public")
-with open("FooFoo.java", "w") as f:
-    f.write(cls)
+with open("FooFoo.java", "w") as f:  # type: ignore
+    f.write(cls) # type: ignore
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{TMPL_NAME}.class", "rb") as f:
-    public_class = f.read()
+with open(f"{TMPL_NAME}.class", "rb") as f:  # type: ignore
+    public_class: bytes = f.read() # type: ignore
 
 
 TMPL_VCTM = "V" * NAME_LENGTH
@@ -287,5 +288,5 @@ with open(f"FooFoo.java", "w") as f:
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{TMPL_ACCS}.class", "rb") as f:
-    accessing_class = f.read()
+with open(f"{TMPL_ACCS}.class", "rb") as f: # type: ignore
+    accessing_class: bytes = f.read() # type: ignore
