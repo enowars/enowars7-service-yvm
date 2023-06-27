@@ -54,11 +54,11 @@ def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> byte
     else:
         raise "foo"
 
-    data = data.replace(("A" * NAME_LENGTH).encode(), name.encode())
-    data = data.replace(b"\xfe\xfe\xfe\xfe", int.to_bytes(length, length=4, byteorder="big", signed=True))
+    data = data.replace(TMPL_NAME.encode(), name.encode())
+    data = data.replace(int.to_bytes(TMPL_LENGTH, length=4, byteorder="big"), int.to_bytes(length, length=4, byteorder="big", signed=True))
 
     for i, v in enumerate(ints):
-        data = data.replace(int.to_bytes(0xdeadbeef + i, length=4, byteorder="big"), int.to_bytes(v, length=4, byteorder="big", signed=True))
+        data = data.replace(int.to_bytes(TMPL_VALS_I + i, length=4, byteorder="big"), int.to_bytes(v, length=4, byteorder="big", signed=True))
 
     return data
 
@@ -172,8 +172,8 @@ async def exploit_test(
     explt_name = "E_" + gen_name()[:8]
 
     data = accessing_class
-    data = data.replace(b"G" * 10, explt_name.encode())
-    data = data.replace(b"V" * 10, victm_name.encode())
+    data = data.replace(TMPL_ACCS.encode(), explt_name.encode())
+    data = data.replace(TMPL_VCTM.encode(), victm_name.encode())
 
     with open(f"{explt_name}.class", "wb") as f:
         f.write(data)
@@ -247,46 +247,42 @@ async def getnoise_access_public(
 
 
 l = 20
-class_name = "A" * NAME_LENGTH
-cls = gen_class_template(class_name, range(0xdeadbeef, 0xdeadbeef + l), 0xfefefefe, "private")
+TMPL_NAME = "A" * NAME_LENGTH
+TMPL_LENGTH = 0xfefefefe
+TMPL_VALS_I = 0xdeadbeef
+cls = gen_class_template(TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "private")
 with open("FooFoo.java", "w") as f:
     f.write(cls)
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{class_name}.class", "rb") as f:
+with open(f"{TMPL_NAME}.class", "rb") as f:
     private_class = f.read()
 
-cls = gen_class_template(class_name, range(0xdeadbeef, 0xdeadbeef + l), 0xfefefefe, "public")
+cls = gen_class_template(TMPL_NAME, range(TMPL_VALS_I, TMPL_VALS_I + l), TMPL_LENGTH, "public")
 with open("FooFoo.java", "w") as f:
     f.write(cls)
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{class_name}.class", "rb") as f:
+with open(f"{TMPL_NAME}.class", "rb") as f:
     public_class = f.read()
 
 
-# name = gen_name()
-# b = ints_to_class(name, [1, 2, 3], 3, "private")
-# with open(name + ".class", "wb") as f:
-#     f.write(b)
-#
-# subprocess.run(["java", name], check=True)
-#
-# exit(0)
+TMPL_VCTM = "V" * NAME_LENGTH
+TMPL_ACCS = "G" * NAME_LENGTH
 
-vtm_class = "class " + "V" * NAME_LENGTH + "{\n"
+vtm_class = "class " + TMPL_VCTM + "{\n"
 vtm_class += "  static int secret_length;\n"
 vtm_class += "}\n"
 
-acc_class = "class " + "G" * NAME_LENGTH + "{\n"
+acc_class = "class " + TMPL_ACCS + "{\n"
 acc_class += "  public static void main(String[] args) {\n"
-acc_class += "    int result = " + "V" * NAME_LENGTH + ".secret_length;\n"
+acc_class += "    int result = " + TMPL_VCTM + ".secret_length;\n"
 acc_class += "  }\n"
 acc_class += "}\n"
 
-with open(f"VVVVVVVVVV.java", "w") as f:
+with open(f"{TMPL_VCTM}.java", "w") as f:
     f.write(vtm_class)
 
 with open(f"FooFoo.java", "w") as f:
@@ -294,5 +290,5 @@ with open(f"FooFoo.java", "w") as f:
 
 subprocess.run(["javac", "FooFoo.java"], check=True)
 
-with open(f"{'G' * 10}.class", "rb") as f:
+with open(f"{TMPL_ACCS}.class", "rb") as f:
     accessing_class = f.read()
