@@ -106,7 +106,7 @@ async def putflag_test(
 
     if m := re.search(r"href='runner.php\?replay_id=(.*?)'", r.text):
         await db.set("replay_id", m.group(1))
-        return json.dumps({"no_ints": len(ints), "class_name": class_name})
+        return class_name
     else:
         raise MumbleException("No replay_id returned by service")
 
@@ -165,9 +165,7 @@ async def exploit_test(
     searcher: FlagSearcher,
     client: AsyncClient,
 ) -> Optional[str]:
-    info = json.loads(task.attack_info)
-    no_of_fields = info["no_ints"]
-    victm_name = info["class_name"]
+    victm_name = task.attack_info
 
     explt_name = "E_" + gen_name()[:8]
 
@@ -210,7 +208,7 @@ async def putnoise_access_public(
     assert_equals(r.status_code, 200, "storing class with flag failed")
 
     await db.set(
-        "noise_info", {"class_name": class_name, "no_ints": l, "secret": secret}
+        "noise_info", {"class_name": class_name, "secret": secret}
     )
 
 
@@ -225,7 +223,6 @@ async def getnoise_access_public(
         info = await db.get("noise_info")
     except KeyError:
         raise MumbleException("database info missing")
-    no_of_fields = info["no_ints"]
     victm_name = info["class_name"]
     secret = info["secret"]
 
