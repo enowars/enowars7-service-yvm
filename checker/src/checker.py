@@ -46,13 +46,30 @@ def ints_to_flag(ints: List[int], length: int) -> str:
     return b[:length].decode()
 
 
-def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> str:
+def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> bytes:
+    if acc_lvl == "private":
+        data = private_class
+    elif acc_lvl == "public":
+        data = public_class
+    else:
+        raise "foo"
+
+    data = data.replace(("A" * NAME_LENGTH).encode(), name.encode())
+    data = data.replace(b"\xfe\xfe\xfe\xfe", int.to_bytes(length, length=4, byteorder="big", signed=True))
+
+    for i, v in enumerate(ints):
+        data = data.replace(int.to_bytes(0xdeadbeef + i, length=4, byteorder="big"), int.to_bytes(v, length=4, byteorder="big", signed=True))
+
+    return data
+
+
+def gen_class_template(name: str, ints: List[int], length: int, acc_lvl: str) -> str:
     assert acc_lvl in [ "private", "public" ]
 
     s = "class " + name + " {\n"
-    s += f"  {acc_lvl} static int secret_length = {length};\n"
+    s += f"  {acc_lvl} static int secret_length = {hex(length)};\n"
     strs = [
-        f"   {acc_lvl} static int secret_{str(i)} = {str(v)};"
+        f"   {acc_lvl} static int secret_{str(i)} = {hex(v)};"
         for i, v in enumerate(ints)
     ]
     s += "\n".join(strs) + "\n"
@@ -77,15 +94,12 @@ async def putflag_test(
     l, ints = flag_to_ints(task.flag)
     class_body = ints_to_class(class_name, ints, l, "private")
 
-    with open(f"{class_name}.java", "w") as f:
+    with open(f"{class_name}.class", "wb") as f:
         f.write(class_body)
-
-    subprocess.run(["javac", f"{class_name}.java"], check=True)
 
     files = {"fileToUpload": open(f"{class_name}.class", "rb")}
     r = await client.post("/runner.php", files=files)
 
-    os.remove(f"{class_name}.java")
     os.remove(f"{class_name}.class")
 
     assert_equals(r.status_code, 200, "storing class with flag failed")
@@ -196,15 +210,12 @@ async def putnoise_access_public(
     l, ints = flag_to_ints(secret)
     class_body = ints_to_class(class_name, ints, l, "public")
 
-    with open(f"{class_name}.java", "w") as f:
+    with open(f"{class_name}.class", "wb") as f:
         f.write(class_body)
-
-    subprocess.run(["javac", f"{class_name}.java"], check=True)
 
     files = {"fileToUpload": open(f"{class_name}.class", "rb")}
     r = await client.post("/runner.php", files=files)
 
-    os.remove(f"{class_name}.java")
     os.remove(f"{class_name}.class")
 
     assert_equals(r.status_code, 200, "storing class with flag failed")
@@ -255,3 +266,34 @@ async def getnoise_access_public(
     os.remove(f"{explt_name}.class")
 
     assert_equals(reconstruct_flag(r.text), secret, "noise not found")
+
+
+l = 20
+class_name = "A" * NAME_LENGTH
+cls = gen_class_template(class_name, range(0xdeadbeef, 0xdeadbeef + l), 0xfefefefe, "private")
+with open("FooFoo.java", "w") as f:
+    f.write(cls)
+
+subprocess.run(["javac", "FooFoo.java"], check=True)
+
+with open(f"{class_name}.class", "rb") as f:
+    private_class = f.read()
+
+cls = gen_class_template(class_name, range(0xdeadbeef, 0xdeadbeef + l), 0xfefefefe, "public")
+with open("FooFoo.java", "w") as f:
+    f.write(cls)
+
+subprocess.run(["javac", "FooFoo.java"], check=True)
+
+with open(f"{class_name}.class", "rb") as f:
+    public_class = f.read()
+
+
+# name = gen_name()
+# b = ints_to_class(name, [1, 2, 3], 3, "private")
+# with open(name + ".class", "wb") as f:
+#     f.write(b)
+#
+# subprocess.run(["java", name], check=True)
+#
+# exit(0)
