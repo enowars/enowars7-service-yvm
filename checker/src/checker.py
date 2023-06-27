@@ -46,11 +46,8 @@ def ints_to_flag(ints: List[int], length: int) -> str:
     return b[:length].decode()
 
 
-def ints_to_class(name: str, ints: List[int], length: int, private: bool) -> str:
-    if private:
-        acc_lvl = "private"
-    else:
-        acc_lvl = "public"
+def ints_to_class(name: str, ints: List[int], length: int, acc_lvl: str) -> str:
+    assert acc_lvl in [ "private", "public" ]
 
     s = "class " + name + " {\n"
     s += f"  {acc_lvl} static int secret_length = {length};\n"
@@ -78,7 +75,7 @@ async def putflag_test(
     class_name = gen_name()
 
     l, ints = flag_to_ints(task.flag)
-    class_body = ints_to_class(class_name, ints, l, True)
+    class_body = ints_to_class(class_name, ints, l, "private")
 
     with open(f"{class_name}.java", "w") as f:
         f.write(class_body)
@@ -158,7 +155,7 @@ async def exploit_test(
     no_of_fields = info["no_ints"]
     victm_name = info["class_name"]
 
-    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, False)
+    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, "public")
 
     explt_name = "EXPL_" + gen_name()
 
@@ -197,7 +194,7 @@ async def putnoise_access_public(
 
     secret = gen_name()
     l, ints = flag_to_ints(secret)
-    class_body = ints_to_class(class_name, ints, l, False)
+    class_body = ints_to_class(class_name, ints, l, "public")
 
     with open(f"{class_name}.java", "w") as f:
         f.write(class_body)
@@ -232,7 +229,7 @@ async def getnoise_access_public(
     victm_name = info["class_name"]
     secret = info["secret"]
 
-    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, False)
+    victim = ints_to_class(victm_name, [0] * no_of_fields, 0, "public")
 
     explt_name = "NOISE_" + gen_name()
 
