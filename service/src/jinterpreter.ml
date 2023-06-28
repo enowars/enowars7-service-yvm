@@ -18,7 +18,19 @@ let get_u2 code pc =
   let b2 = code.[!pc + 2] |> Char.code in
   b1 lor b2
 
-let step state get_field =
+let rec check_inv_helper = function
+| (')' :: ret, []) -> Some ret
+| ('I' :: ds, _ :: ss) -> check_inv_helper (ds, ss)
+| (_, _) -> None
+
+
+
+let check_invocation_type stack dstor =
+  assert (dstor.[0] == '(');
+  let dstor = String.sub dstor 1 (String.length dstor - 1) in
+  let s = Stack.to_seq stack in
+
+let step state get_field get_method =
   let { sstack; halt; pool; name } = state in
   let frame =
     match sstack with frame :: _ -> frame | [] -> failwith "empty stack?!"
@@ -96,6 +108,21 @@ let step state get_field =
         in
         f := v;
         pc := !pc + 3
+    | '\xb8' (*invokestatic*) ->
+        let idx = get_u2 code pc in
+        let klass, (name, jtype) =
+          match c_cls.ckd_cp.(idx) with
+          | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
+          | _ -> failwith "expected method"
+        in
+        let f = get_method pool c_cls.name klass (name, jtype) in
+        let v =
+          print_endline jtype;
+          match jtype with
+          | "I" -> Jparser.Int (Stack.pop stack |> Int32.of_int)
+          | _ -> failwith "yaoawhfahw"
+        in
+        failwith "not done"
     | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
   in
   state
@@ -125,6 +152,7 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let pool = ref [ (c_cls.name, c_cls) ] in
   let state = ref { sstack = [ frame ]; halt; pool; name } in
   let get_field = Classpool.get_field run in
+  let get_method = Classpool.get_method run in
   while not !(!state.halt) do
-    state := step !state get_field
+    state := step !state get_field get_method
   done
