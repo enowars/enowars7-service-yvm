@@ -25,12 +25,12 @@ let rec check_inv_helper = function
 
 
 
-let check_invocation_type stack dstor =
+let get_args_str dstor =
   assert (dstor.[0] == '(');
-  let dstor = String.sub dstor 1 (String.length dstor - 1) in
-  let s = Stack.to_seq stack in
+  let i = String.rindex dstor ')' in
+  String.sub dstor 1 (i - 1)
 
-let step state get_field get_method =
+let step state get_field (get_method : Classpool.t -> string -> string -> string * string -> Jparser.meth) =
   let { sstack; halt; pool; name } = state in
   let frame =
     match sstack with frame :: _ -> frame | [] -> failwith "empty stack?!"
@@ -116,13 +116,25 @@ let step state get_field get_method =
           | _ -> failwith "expected method"
         in
         let f = get_method pool c_cls.name klass (name, jtype) in
-        let v =
-          print_endline jtype;
-          match jtype with
-          | "I" -> Jparser.Int (Stack.pop stack |> Int32.of_int)
-          | _ -> failwith "yaoawhfahw"
+        let args = get_args_str jtype in
+        let klass = match List.assoc_opt klass !pool with
+        | Some x -> x
+        | None -> failwith "class should have been loaded"
         in
-        failwith "not done"
+        let locals = Array.make f.max_locals 0 in
+        let lidx = ref 0 in
+        let pop_and_set_arg c =
+          let e = Stack.pop stack in
+          locals.(!lidx) <- e;
+          let () = match (c, e) with
+          | ('I', _) -> lidx := !lidx + 1
+          | _ -> failwith "foo"
+          in
+          ()
+        in
+        String.iter pop_and_set_arg args;
+        let new_frame = { code = f.code; pc = ref 0; fstack = Stack.create (); klass; locals; } in
+        ()
     | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
   in
   state
