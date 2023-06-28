@@ -5,6 +5,7 @@ type frame = {
   klass : Jparser.ckd_class;
   locals : int array;
 }
+[@@deriving show]
 
 type state = {
   sstack : frame list;
@@ -152,17 +153,22 @@ let step state get_field
       in
       let locals = Array.make f.max_locals 0 in
       let lidx = ref 0 in
-      let pop_and_set_arg c =
-        let e = List.hd stack in
-        locals.(!lidx) <- e;
-        let () =
-          match (c, e) with 'I', _ -> lidx := !lidx + 1 | _ -> failwith "foo"
-        in
-        ()
+      let rec pop_and_set_arg = function
+        | [], stack -> stack
+        | _, [] -> failwith "foo"
+        | 'I' :: args, s :: ss ->
+            locals.(!lidx) <- s;
+            lidx := !lidx + 1;
+            pop_and_set_arg (args, ss)
+        | _, _ -> failwith "foo"
       in
-      String.iter pop_and_set_arg args;
+      let args = String.fold_right List.cons args [] in
+      let fstack = pop_and_set_arg (args, stack) in
       let new_frame = { code = f.code; pc = 0; fstack = []; klass; locals } in
-      { state with sstack = new_frame :: { frame with pc = pc + 3 } :: frames }
+      {
+        state with
+        sstack = new_frame :: { frame with pc = pc + 3; fstack } :: frames;
+      }
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
