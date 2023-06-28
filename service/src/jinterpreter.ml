@@ -1,7 +1,7 @@
 type frame = {
   code : string;
   pc : int;
-  fstack : int Stack.t;
+  fstack : int list;
   klass : Jparser.ckd_class;
   locals : int array;
 }
@@ -39,112 +39,131 @@ let step state get_field
   in
   let { code; pc; fstack = stack; klass = c_cls; locals } = frame in
   let opcode = code.[pc] in
-  let pc =
-    match opcode with
-    | '\x04' (*iconst_1*) ->
-        Stack.push 1 stack;
-        pc + 1
-    | '\x08' (*iconst_5*) ->
-        Stack.push 5 stack;
-        pc + 1
-    | '\x10' (*bipush*) ->
-        let byte = code.[pc + 1] |> Char.code in
-        Stack.push byte stack;
-        pc + 2
-    | '\x11' (*sipush*) ->
-        Stack.push (get_u2 code pc) stack;
-        pc + 3
-    | '\x12' (*ldc*) ->
-        let idx = code.[pc + 1] |> Char.code in
-        let () =
-          match c_cls.constant_pool.(idx) with
-          | C_Integer i -> Stack.push (Int32.to_int i) stack
-          | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
-        in
-        pc + 2
-    | '\x19' (*aload*) ->
-        let lidx = code.[pc + 1] |> Char.code in
-        Stack.push locals.(lidx) stack;
-        pc + 2
-    | '\x2a' (*aload_0*) ->
-        Stack.push locals.(0) stack;
-        pc + 1
-    | '\x3c' (*istore_1*) ->
-        locals.(1) <- Stack.pop stack;
-        pc + 1
-    | '\x60' (*iadd*) ->
-        let a = Stack.pop stack in
-        let b = Stack.pop stack in
-        Stack.push (a + b) stack;
-        pc + 1
-    | '\xb1' (*return*) ->
-        if name = "main" then pool |> Classpool.show |> print_endline else ();
-        halt := true;
-        -1
-    | '\xb2' (*getstatic*) ->
-        let idx = get_u2 code pc in
-        let klass, (name, jtype) =
-          match c_cls.ckd_cp.(idx) with
-          | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
-          | _ -> failwith "expected field"
-        in
-        let f = get_field pool c_cls.name klass (name, jtype) in
-        let v =
-          match !f with
-          | Jparser.Int i -> i
-          | _ -> failwith "only int implemented"
-        in
-        Stack.push (Int32.to_int v) stack;
-        pc + 3
-    | '\xb3' (*putstatic*) ->
-        let idx = get_u2 code pc in
-        let klass, (name, jtype) =
-          match c_cls.ckd_cp.(idx) with
-          | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
-          | _ -> failwith "expected field"
-        in
-        let f = get_field pool c_cls.name klass (name, jtype) in
-        let v =
-          match jtype with
-          | "I" -> Jparser.Int (Stack.pop stack |> Int32.of_int)
-          | _ -> failwith "yaoawhfahw"
-        in
-        f := v;
-        pc + 3
-    | '\xb8' (*invokestatic*) ->
-        let idx = get_u2 code pc in
-        let klass, (name, jtype) =
-          match c_cls.ckd_cp.(idx) with
-          | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
-          | _ -> failwith "expected method"
-        in
-        let f = get_method pool c_cls.name klass (name, jtype) in
-        let args = get_args_str jtype in
-        let klass =
-          match List.assoc_opt klass !pool with
-          | Some x -> x
-          | None -> failwith "class should have been loaded"
-        in
-        let locals = Array.make f.max_locals 0 in
-        let lidx = ref 0 in
-        let pop_and_set_arg c =
-          let e = Stack.pop stack in
-          locals.(!lidx) <- e;
-          let () =
-            match (c, e) with
-            | 'I', _ -> lidx := !lidx + 1
-            | _ -> failwith "foo"
-          in
-          ()
-        in
-        String.iter pop_and_set_arg args;
-        let new_frame =
-          { code = f.code; pc = 0; fstack = Stack.create (); klass; locals }
-        in
-        pc + 3
-    | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
+  let foo pc fstack =
+    { state with sstack = { frame with pc; fstack } :: frames }
   in
-  { state with sstack = { frame with pc } :: frames }
+  opcode |> Char.code |> Printf.printf "opcode: 0x%x\n";
+  match opcode with
+  | '\x04' (*iconst_1*) -> foo (pc + 1) (1 :: stack)
+  | '\x08' (*iconst_5*) -> foo (pc + 1) (5 :: stack)
+  | '\x10' (*bipush*) ->
+      let byte = code.[pc + 1] |> Char.code in
+      foo (pc + 2) (byte :: stack)
+  | '\x11' (*sipush*) -> foo (pc + 3) (get_u2 code pc :: stack)
+  | '\x12' (*ldc*) ->
+      let idx = code.[pc + 1] |> Char.code in
+      let pc, s =
+        match c_cls.constant_pool.(idx) with
+        | C_Integer i -> (pc + 2, Int32.to_int i :: stack)
+        | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
+      in
+      foo pc s
+  | '\x19' (*aload*) ->
+      let lidx = code.[pc + 1] |> Char.code in
+      foo (pc + 2) (locals.(lidx) :: stack)
+  | '\x1a' (*iload_0*) -> foo (pc + 1) (locals.(0) :: stack)
+  | '\x1b' (*iload_1*) -> foo (pc + 1) (locals.(1) :: stack)
+  | '\x1c' (*iload_2*) -> foo (pc + 1) (locals.(2) :: stack)
+  | '\x2a' (*aload_0*) -> foo (pc + 1) (locals.(0) :: stack)
+  | '\x3c' (*istore_1*) ->
+      let ss =
+        match stack with
+        | s :: ss ->
+            locals.(1) <- s;
+            ss
+        | [] -> failwith "extected int on stack"
+      in
+      foo (pc + 1) ss
+  | '\x3d' (*istore_2*) ->
+      let ss =
+        match stack with
+        | s :: ss ->
+            locals.(2) <- s;
+            ss
+        | [] -> failwith "expected int on stack"
+      in
+      foo (pc + 1) ss
+  | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
+  | '\x60' (*iadd*) ->
+      let stack =
+        match stack with
+        | a :: b :: ss -> (a + b) :: ss
+        | _ -> failwith "expected two ints on stack"
+      in
+      foo (pc + 1) stack
+  | '\xac' (*ireturn*) ->
+      let i =
+        match stack with
+        | i :: _ -> i
+        | [] -> failwith "ireturn: expected int on stack"
+      in
+      let frames =
+        match frames with
+        | f :: fs -> { f with fstack = i :: f.fstack } :: fs
+        | [] -> failwith "foo"
+      in
+      { state with sstack = frames }
+  | '\xb1' (*return*) ->
+      if name = "main" then pool |> Classpool.show |> print_endline else ();
+      halt := true;
+      { state with sstack = frames }
+  | '\xb2' (*getstatic*) ->
+      let idx = get_u2 code pc in
+      let klass, (name, jtype) =
+        match c_cls.ckd_cp.(idx) with
+        | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
+        | _ -> failwith "expected field"
+      in
+      let f = get_field pool c_cls.name klass (name, jtype) in
+      let v =
+        match !f with
+        | Jparser.Int i -> i
+        | _ -> failwith "only int implemented"
+      in
+      foo (pc + 3) (Int32.to_int v :: stack)
+  | '\xb3' (*putstatic*) ->
+      let idx = get_u2 code pc in
+      let klass, (name, jtype) =
+        match c_cls.ckd_cp.(idx) with
+        | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
+        | _ -> failwith "expected field"
+      in
+      let f = get_field pool c_cls.name klass (name, jtype) in
+      let v, stack =
+        match (jtype, stack) with
+        | "I", i :: ss -> (Jparser.Int (Int32.of_int i), ss)
+        | _ -> failwith "yaoawhfahw"
+      in
+      f := v;
+      foo (pc + 3) stack
+  | '\xb8' (*invokestatic*) ->
+      let idx = get_u2 code pc in
+      let klass, (name, jtype) =
+        match c_cls.ckd_cp.(idx) with
+        | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
+        | _ -> failwith "expected method"
+      in
+      let f = get_method pool c_cls.name klass (name, jtype) in
+      let args = get_args_str jtype in
+      let klass =
+        match List.assoc_opt klass !pool with
+        | Some x -> x
+        | None -> failwith "class should have been loaded"
+      in
+      let locals = Array.make f.max_locals 0 in
+      let lidx = ref 0 in
+      let pop_and_set_arg c =
+        let e = List.hd stack in
+        locals.(!lidx) <- e;
+        let () =
+          match (c, e) with 'I', _ -> lidx := !lidx + 1 | _ -> failwith "foo"
+        in
+        ()
+      in
+      String.iter pop_and_set_arg args;
+      let new_frame = { code = f.code; pc = 0; fstack = []; klass; locals } in
+      { state with sstack = new_frame :: { frame with pc = pc + 3 } :: frames }
+  | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
@@ -163,9 +182,8 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
       | None -> main.code
     else main.code
   in
-  let fstack = Stack.create () in
   let locals = Array.make main.max_locals 0 in
-  let frame = { code; pc = 0; fstack; klass = c_cls; locals } in
+  let frame = { code; pc = 0; fstack = []; klass = c_cls; locals } in
   let halt = ref false in
   let pool = ref [ (c_cls.name, c_cls) ] in
   let state = ref { sstack = [ frame ]; halt; pool; name } in
