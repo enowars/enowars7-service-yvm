@@ -1,7 +1,6 @@
 # TODO
 
 - pipeline for `fixed`
-- Refactor checker to not use `javac`
 - make service usage more _understandable_ by improving `index.html`:
     - add unit test that covers "usual usage" case, generate docs from it
 
