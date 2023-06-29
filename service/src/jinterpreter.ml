@@ -202,6 +202,11 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let state = ref { sstack = [ frame ]; pool; name } in
   let get_field = Classpool.get_field run in
   let get_method = Classpool.get_method run in
+  let i = ref 0 in
   while !state.sstack != [] do
+    let _ =
+      if !i > 10000 then failwith "more than 10k instructions: aborting"
+      else incr i
+    in
     state := step !state get_field get_method
   done
