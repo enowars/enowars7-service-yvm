@@ -363,7 +363,6 @@ let cook_field cp (raw_field : field_info) =
 let cook_meth cp raw_meth =
   let name = rslv_name cp raw_meth.name_index in
   let dscr = rslv_name cp raw_meth.descriptor_index in
-  show_method_info raw_meth |> print_endline;
   if raw_meth.is_native then ((name, dscr), NativeMeth)
   else
     let code_attr = raw_meth.attributes.(0) in
