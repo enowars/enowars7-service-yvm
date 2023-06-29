@@ -1,0 +1,10 @@
+(rule
+ (alias runtest)
+ (deps %{bin:yvm} Foo.java)
+ (action
+  (progn
+   (run javac Foo.java)
+   (with-stdout-to
+    out.txt
+    (run yvm Foo.class))
+   (system "grep 2000001 out.txt > /dev/null"))))
