@@ -40,6 +40,13 @@ let take_args args stack =
   let stack, racc = ta_helper args stack [] in
   (stack, racc)
 
+let run_native state _ name args =
+  match name with
+  | "print" ->
+      List.iter (Printf.printf "%d\n") args;
+      state
+  | _ -> "native method '" ^ name ^ "' not implemented" |> failwith
+
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
@@ -147,33 +154,35 @@ let step state get_field
       in
       f := v;
       foo (pc + 3) stack
-  | '\xb8' (*invokestatic*) ->
+  | '\xb8' (*invokestatic*) -> (
       let idx = get_u2 code pc in
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
         | _ -> failwith "expected method"
       in
-      let f =
-        match get_method pool c_cls.name klass (name, jtype) with
-        | Jparser.NativeMeth -> failwith "foo"
-        | Jparser.LocalMeth f -> f
-      in
       let args = get_args_str jtype in
-      let klass =
-        match List.assoc_opt klass !pool with
-        | Some x -> x
-        | None -> failwith "class should have been loaded"
-      in
-      let locals = Array.make f.max_locals 0 in
       let args = String.fold_right List.cons args [] in
       let fstack, args = take_args args stack in
-      List.iteri (Array.set locals) args;
-      let new_frame = { code = f.code; pc = 0; fstack = []; klass; locals } in
-      {
-        state with
-        sstack = new_frame :: { frame with pc = pc + 3; fstack } :: frames;
-      }
+      match get_method pool c_cls.name klass (name, jtype) with
+      | Jparser.NativeMeth ->
+          let state = foo (pc + 3) fstack in
+          run_native state klass name args
+      | Jparser.LocalMeth f ->
+          let klass =
+            match List.assoc_opt klass !pool with
+            | Some x -> x
+            | None -> failwith "class should have been loaded"
+          in
+          let locals = Array.make f.max_locals 0 in
+          List.iteri (Array.set locals) args;
+          let new_frame =
+            { code = f.code; pc = 0; fstack = []; klass; locals }
+          in
+          {
+            state with
+            sstack = new_frame :: { frame with pc = pc + 3; fstack } :: frames;
+          })
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
