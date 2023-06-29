@@ -29,6 +29,17 @@ let get_args_str dstor =
   let i = String.rindex dstor ')' in
   String.sub dstor 1 (i - 1)
 
+let take_args args stack =
+  let rec ta_helper args stack acc =
+    match (args, stack) with
+    | [], stack -> (stack, acc)
+    | _, [] -> failwith "foo"
+    | 'I' :: args, s :: ss -> ta_helper args ss (s :: acc)
+    | _, _ -> failwith "foo"
+  in
+  let stack, racc = ta_helper args stack [] in
+  (stack, racc)
+
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
@@ -155,18 +166,9 @@ let step state get_field
         | None -> failwith "class should have been loaded"
       in
       let locals = Array.make f.max_locals 0 in
-      let lidx = ref 0 in
-      let rec pop_and_set_arg = function
-        | [], stack -> stack
-        | _, [] -> failwith "foo"
-        | 'I' :: args, s :: ss ->
-            locals.(!lidx) <- s;
-            lidx := !lidx + 1;
-            pop_and_set_arg (args, ss)
-        | _, _ -> failwith "foo"
-      in
       let args = String.fold_right List.cons args [] in
-      let fstack = pop_and_set_arg (args, stack) in
+      let fstack, args = take_args args stack in
+      List.iteri (Array.set locals) args;
       let new_frame = { code = f.code; pc = 0; fstack = []; klass; locals } in
       {
         state with
