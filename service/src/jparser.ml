@@ -75,6 +75,7 @@ type field_info = {
 
 type method_info = {
   access_flags : int;
+  is_native : bool;
   name_index : int;
   descriptor_index : int;
   attributes : attribute_info array;
@@ -102,13 +103,15 @@ type exc_table_entry = {
 }
 [@@deriving show]
 
-type meth = {
+type lmeth = {
   max_stack : int;
   max_locals : int;
   code : string;
   exc_table : exc_table_entry array;
 }
 [@@deriving show]
+
+type meth = NativeMeth | LocalMeth of lmeth [@@deriving show]
 
 type ckd_class = {
   name : string;
@@ -277,6 +280,7 @@ let read_class ic =
     Array.make methods_count
       {
         access_flags = -1;
+        is_native = false;
         name_index = -1;
         descriptor_index = -1;
         attributes = [||];
@@ -285,6 +289,7 @@ let read_class ic =
 
   for i = 0 to methods_count - 1 do
     let access_flags = input_u2 ic in
+    let is_native = access_flags land 0x0100 != 0 in
     let name_index = input_u2 ic in
     let descriptor_index = input_u2 ic in
     let attributes_count = input_u2 ic in
@@ -294,7 +299,8 @@ let read_class ic =
     for a = 0 to attributes_count - 1 do
       attributes.(a) <- parse_attribute_info ic
     done;
-    methods.(i) <- { access_flags; name_index; descriptor_index; attributes }
+    methods.(i) <-
+      { access_flags; is_native; name_index; descriptor_index; attributes }
   done;
 
   let attributes_count = input_u2 ic in
@@ -357,19 +363,23 @@ let cook_field cp (raw_field : field_info) =
 let cook_meth cp raw_meth =
   let name = rslv_name cp raw_meth.name_index in
   let dscr = rslv_name cp raw_meth.descriptor_index in
-  let code_attr = raw_meth.attributes.(0) in
-  assert (rslv_name cp code_attr.attribute_name_index = "Code");
-  let code_str = code_attr.info in
-  let max_stack = String.get_uint16_be code_str 0 in
-  let max_locals = String.get_uint16_be code_str 2 in
-  let code_len = String.get_int32_be code_str 4 |> Int32.to_int in
-  ( (name, dscr),
-    {
-      max_stack;
-      max_locals;
-      code = String.sub code_str 8 code_len;
-      exc_table = [||];
-    } )
+  show_method_info raw_meth |> print_endline;
+  if raw_meth.is_native then ((name, dscr), NativeMeth)
+  else
+    let code_attr = raw_meth.attributes.(0) in
+    assert (rslv_name cp code_attr.attribute_name_index = "Code");
+    let code_str = code_attr.info in
+    let max_stack = String.get_uint16_be code_str 0 in
+    let max_locals = String.get_uint16_be code_str 2 in
+    let code_len = String.get_int32_be code_str 4 |> Int32.to_int in
+    ( (name, dscr),
+      LocalMeth
+        {
+          max_stack;
+          max_locals;
+          code = String.sub code_str 8 code_len;
+          exc_table = [||];
+        } )
 
 let cook_class (raw_class : raw_class) =
   let cp = raw_class.constant_pool in

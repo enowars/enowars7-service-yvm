@@ -143,7 +143,11 @@ let step state get_field
         | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
         | _ -> failwith "expected method"
       in
-      let f = get_method pool c_cls.name klass (name, jtype) in
+      let f =
+        match get_method pool c_cls.name klass (name, jtype) with
+        | Jparser.NativeMeth -> failwith "foo"
+        | Jparser.LocalMeth f -> f
+      in
       let args = get_args_str jtype in
       let klass =
         match List.assoc_opt klass !pool with
@@ -173,8 +177,8 @@ let step state get_field
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
     match List.assoc_opt (name, jtype) c_cls.meths with
-    | Some main -> main
-    | None -> failwith ("Method " ^ name ^ jtype ^ " not found")
+    | Some (Jparser.LocalMeth main) -> main
+    | _ -> failwith ("Method " ^ name ^ jtype ^ " not found")
   in
   let cut_last_char s =
     let len = String.length s in
@@ -183,8 +187,8 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let code =
     if name = "main" && jtype = "([Ljava/lang/String;)V" then
       match List.assoc_opt ("<clinit>", "()V") c_cls.meths with
-      | Some static -> cut_last_char static.code ^ main.code
-      | None -> main.code
+      | Some (Jparser.LocalMeth static) -> cut_last_char static.code ^ main.code
+      | _ -> main.code
     else main.code
   in
   let locals = Array.make main.max_locals 0 in
