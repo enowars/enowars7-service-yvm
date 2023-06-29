@@ -43,7 +43,6 @@ let step state get_field
   let foo pc fstack =
     { state with sstack = { frame with pc; fstack } :: frames }
   in
-  opcode |> Char.code |> Printf.printf "opcode: 0x%x\n";
   match opcode with
   | '\x04' (*iconst_1*) -> foo (pc + 1) (1 :: stack)
   | '\x08' (*iconst_5*) -> foo (pc + 1) (5 :: stack)
