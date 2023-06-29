@@ -7,12 +7,7 @@ type frame = {
 }
 [@@deriving show]
 
-type state = {
-  sstack : frame list;
-  halt : bool ref;
-  pool : Classpool.t;
-  name : string;
-}
+type state = { sstack : frame list; pool : Classpool.t; name : string }
 
 let get_u2 code pc =
   let b1 = (code.[pc + 1] |> Char.code) lsl 8 in
@@ -50,7 +45,7 @@ let run_native state _ name args =
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
-  let { sstack; halt; pool; name } = state in
+  let { sstack; pool; name } = state in
   let frame, frames =
     match sstack with
     | frame :: frames -> (frame, frames)
@@ -123,7 +118,6 @@ let step state get_field
       { state with sstack = frames }
   | '\xb1' (*return*) ->
       if name = "main" then pool |> Classpool.show |> print_endline else ();
-      halt := true;
       { state with sstack = frames }
   | '\xb2' (*getstatic*) ->
       let idx = get_u2 code pc in
@@ -204,11 +198,10 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   in
   let locals = Array.make main.max_locals 0 in
   let frame = { code; pc = 0; fstack = []; klass = c_cls; locals } in
-  let halt = ref false in
   let pool = ref [ (c_cls.name, c_cls) ] in
-  let state = ref { sstack = [ frame ]; halt; pool; name } in
+  let state = ref { sstack = [ frame ]; pool; name } in
   let get_field = Classpool.get_field run in
   let get_method = Classpool.get_method run in
-  while not !(!state.halt) do
+  while !state.sstack != [] do
     state := step !state get_field get_method
   done
