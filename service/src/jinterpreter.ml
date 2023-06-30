@@ -112,6 +112,9 @@ let step state get_field
       in
       foo (pc + 1) ss
   | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
+  | '\x59' (*dup*) ->
+      let h = List.hd stack in
+      foo (pc + 1) (h :: stack)
   | '\x60' (*iadd*) ->
       let stack =
         match stack with
