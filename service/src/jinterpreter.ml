@@ -40,11 +40,15 @@ let take_args args stack =
   let stack, racc = ta_helper args stack [] in
   (stack, racc)
 
-let rec print_pType = function
-  | Jparser.P_Int i -> i |> Int32.to_int |> Printf.printf "%d\n"
-  | Jparser.P_Char c -> c |> Printf.printf "%c\n"
-  | Jparser.P_Reference arr -> arr |> Array.iter print_pType
-  | _ -> failwith "cannot print this"
+let print_pType pt =
+  let rec print_pType_h = function
+    | Jparser.P_Int i -> i |> Int32.to_int |> Printf.printf "%d"
+    | Jparser.P_Char c -> c |> Printf.printf "%c"
+    | Jparser.P_Reference arr -> arr |> Array.iter print_pType_h
+    | _ -> failwith "cannot print this"
+  in
+  print_pType_h pt;
+  print_newline ()
 
 let run_native state _ name args =
   match name with
