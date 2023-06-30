@@ -56,6 +56,12 @@ let run_native state _ name args =
       state
   | _ -> "native method '" ^ name ^ "' not implemented" |> failwith
 
+let astore_n n locals = function
+  | Jparser.P_Reference s :: ss ->
+      locals.(n) <- Jparser.P_Reference s;
+      ss
+  | _ -> failwith "expected reference on stack"
+
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
@@ -128,15 +134,10 @@ let step state get_field
         | _ -> failwith "expected int on stack"
       in
       foo (pc + 1) ss
-  | '\x4c' (*astore_1*) ->
-      let ss =
-        match stack with
-        | P_Reference s :: ss ->
-            locals.(1) <- P_Reference s;
-            ss
-        | _ -> failwith "expected reference on stack"
-      in
-      foo (pc + 1) ss
+  | '\x4b' (*astore_0*) -> foo (pc + 1) (astore_n 0 locals stack)
+  | '\x4c' (*astore_1*) -> foo (pc + 1) (astore_n 1 locals stack)
+  | '\x4d' (*astore_2*) -> foo (pc + 1) (astore_n 2 locals stack)
+  | '\x4e' (*astore_3*) -> foo (pc + 1) (astore_n 3 locals stack)
   | '\x55' (*castore*) ->
       let ss =
         match stack with
