@@ -92,6 +92,7 @@ let step state get_field
   | '\x1a' (*iload_0*) -> foo (pc + 1) (locals.(0) :: stack)
   | '\x1b' (*iload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x1c' (*iload_2*) -> foo (pc + 1) (locals.(2) :: stack)
+  | '\x1d' (*iload_3*) -> foo (pc + 1) (locals.(3) :: stack)
   | '\x2a' (*aload_0*) -> foo (pc + 1) (locals.(0) :: stack)
   | '\x2b' (*aload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x2c' (*aload_2*) -> foo (pc + 1) (locals.(2) :: stack)
