@@ -62,6 +62,12 @@ let astore_n n locals = function
       ss
   | _ -> failwith "expected reference on stack"
 
+let istore_n n locals = function
+  | Jparser.P_Int i :: ss ->
+      locals.(n) <- Jparser.P_Int i;
+      ss
+  | _ -> failwith "expected int on stack"
+
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
@@ -116,24 +122,10 @@ let step state get_field
         | _ -> failwith "foo"
       in
       foo (pc + 1) ss
-  | '\x3c' (*istore_1*) ->
-      let ss =
-        match stack with
-        | P_Int s :: ss ->
-            locals.(1) <- P_Int s;
-            ss
-        | _ -> failwith "extected int on stack"
-      in
-      foo (pc + 1) ss
-  | '\x3d' (*istore_2*) ->
-      let ss =
-        match stack with
-        | P_Int s :: ss ->
-            locals.(2) <- P_Int s;
-            ss
-        | _ -> failwith "expected int on stack"
-      in
-      foo (pc + 1) ss
+  | '\x3b' (*istore_0*) -> foo (pc + 1) (istore_n 0 locals stack)
+  | '\x3c' (*istore_1*) -> foo (pc + 1) (istore_n 1 locals stack)
+  | '\x3d' (*istore_2*) -> foo (pc + 1) (istore_n 2 locals stack)
+  | '\x3e' (*istore_3*) -> foo (pc + 1) (istore_n 3 locals stack)
   | '\x4b' (*astore_0*) -> foo (pc + 1) (astore_n 0 locals stack)
   | '\x4c' (*astore_1*) -> foo (pc + 1) (astore_n 1 locals stack)
   | '\x4d' (*astore_2*) -> foo (pc + 1) (astore_n 2 locals stack)
