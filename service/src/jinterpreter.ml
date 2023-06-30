@@ -71,13 +71,11 @@ let step state get_field
         | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
       in
       foo pc s
-  | '\x19' (*aload*) ->
-      let lidx = code.[pc + 1] |> Char.code in
-      foo (pc + 2) (locals.(lidx) :: stack)
+  | '\x19' (*aload*) -> failwith "aload not implemented"
   | '\x1a' (*iload_0*) -> foo (pc + 1) (locals.(0) :: stack)
   | '\x1b' (*iload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x1c' (*iload_2*) -> foo (pc + 1) (locals.(2) :: stack)
-  | '\x2a' (*aload_0*) -> foo (pc + 1) (locals.(0) :: stack)
+  | '\x2a' (*aload_0*) -> failwith "aload_0 not implemented"
   | '\x3c' (*istore_1*) ->
       let ss =
         match stack with
