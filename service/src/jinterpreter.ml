@@ -46,12 +46,15 @@ let run_native state _ name args =
   | "print" ->
       List.iter print_pType args;
       state
+  | "dump" ->
+      state.pool |> Classpool.show |> print_endline;
+      state
   | _ -> "native method '" ^ name ^ "' not implemented" |> failwith
 
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
-  let { sstack; pool; name } = state in
+  let { sstack; pool; _ } = state in
   let frame, frames =
     match sstack with
     | frame :: frames -> (frame, frames)
@@ -125,9 +128,7 @@ let step state get_field
         | [] -> failwith "foo"
       in
       { state with sstack = frames }
-  | '\xb1' (*return*) ->
-      if name = "main" then pool |> Classpool.show |> print_endline else ();
-      { state with sstack = frames }
+  | '\xb1' (*return*) -> { state with sstack = frames }
   | '\xb2' (*getstatic*) ->
       let idx = get_u2 code pc in
       let klass, (name, jtype) =
