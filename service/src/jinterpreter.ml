@@ -24,7 +24,15 @@ let rec check_inv_helper = function
 let get_args_str dstor =
   assert (dstor.[0] == '(');
   let i = String.rindex dstor ')' in
-  String.sub dstor 1 (i - 1)
+  let args = String.sub dstor 1 (i - 1) in
+  let args = String.fold_right List.cons args [] in
+  let rec rm_arr_br = function
+    | '[' :: '[' :: cs -> rm_arr_br ('[' :: cs)
+    | '[' :: _ :: cs -> '[' :: rm_arr_br cs
+    | c :: cs -> c :: rm_arr_br cs
+    | [] -> []
+  in
+  rm_arr_br args
 
 let take_args args stack =
   let rec ta_helper args stack acc =
@@ -37,7 +45,7 @@ let take_args args stack =
         ta_helper args ss (Jparser.P_Int (c |> Char.code |> Int32.of_int) :: acc)
     | 'C' :: args, Jparser.P_Char c :: ss ->
         ta_helper args ss (Jparser.P_Char c :: acc)
-    | '[' :: 'C' :: args, Jparser.P_Reference arr :: ss ->
+    | '[' :: args, Jparser.P_Reference arr :: ss ->
         ta_helper args ss (Jparser.P_Reference arr :: acc)
     | _, _ -> failwith "foo"
   in
@@ -241,7 +249,6 @@ let step state get_field
         | _ -> failwith "expected method"
       in
       let args = get_args_str jtype in
-      let args = String.fold_right List.cons args [] in
       let fstack, args = take_args args stack in
       match get_method pool c_cls.name klass (name, jtype) with
       | Jparser.NativeMeth ->
