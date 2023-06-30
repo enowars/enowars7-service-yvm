@@ -114,6 +114,19 @@ let step state get_field
   | '\x2b' (*aload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x2c' (*aload_2*) -> foo (pc + 1) (locals.(2) :: stack)
   | '\x2d' (*aload_3*) -> foo (pc + 1) (locals.(3) :: stack)
+  | '\x32' (*aaload*) ->
+      let ss =
+        match stack with
+        | P_Int idx :: P_Reference arr :: ss ->
+            let a =
+              match arr.(Int32.to_int idx) with
+              | P_Reference a -> a
+              | _ -> failwith "expected arr array"
+            in
+            Jparser.P_Reference a :: ss
+        | _ -> failwith "foo"
+      in
+      foo (pc + 1) ss
   | '\x34' (*caload*) ->
       let ss =
         match stack with
@@ -135,6 +148,15 @@ let step state get_field
   | '\x4c' (*astore_1*) -> foo (pc + 1) (astore_n 1 locals stack)
   | '\x4d' (*astore_2*) -> foo (pc + 1) (astore_n 2 locals stack)
   | '\x4e' (*astore_3*) -> foo (pc + 1) (astore_n 3 locals stack)
+  | '\x53' (*aastore*) ->
+      let ss =
+        match stack with
+        | P_Reference a :: P_Int idx :: P_Reference arr :: ss ->
+            arr.(Int32.to_int idx) <- P_Reference a;
+            ss
+        | _ -> failwith "expected reference on stack"
+      in
+      foo (pc + 1) ss
   | '\x55' (*castore*) ->
       let ss =
         match stack with
@@ -239,6 +261,15 @@ let step state get_field
       in
       let r = Array.make count Jparser.P_ReturnAddress in
       foo (pc + 2) (Jparser.P_Reference r :: stack)
+  | '\xbd' (*anewarray*) ->
+      let count, stack =
+        match stack with
+        | P_Int count :: stack -> (Int32.to_int count, stack)
+        | a :: _ -> show_pType a |> failwith
+        | [] -> failwith "empty stack"
+      in
+      let r = Array.make count Jparser.P_ReturnAddress in
+      foo (pc + 3) (Jparser.P_Reference r :: stack)
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
