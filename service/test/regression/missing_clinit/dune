@@ -1,7 +1,0 @@
-(rule
- (alias runtest)
- (deps %{bin:yvm} Foo.java Bar.java)
- (action
-  (progn
-   (run javac Foo.java)
-   (run yvm Foo.class))))
