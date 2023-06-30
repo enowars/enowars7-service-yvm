@@ -3,9 +3,9 @@ class Foo {
 		return x + x + y;
 	}
 
-	static int x;
+	static native void print(int x);
 
 	public static void main(String[] args) {
-		x = foo(1000000, 1);
+		print(foo(1000000, 1));
 	}
 }
