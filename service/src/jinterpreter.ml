@@ -40,10 +40,10 @@ let take_args args stack =
   let stack, racc = ta_helper args stack [] in
   (stack, racc)
 
-let print_pType = function
+let rec print_pType = function
   | Jparser.P_Int i -> i |> Int32.to_int |> Printf.printf "%d\n"
   | Jparser.P_Char c -> c |> Printf.printf "%c\n"
-  | Jparser.P_Reference arr -> arr |> Bytes.to_string |> print_endline
+  | Jparser.P_Reference arr -> arr |> Array.iter print_pType
   | _ -> failwith "cannot print this"
 
 let run_native state _ name args =
@@ -118,7 +118,12 @@ let step state get_field
       let ss =
         match stack with
         | P_Int idx :: P_Reference arr :: ss ->
-            Jparser.P_Char (Bytes.get arr (Int32.to_int idx)) :: ss
+            let c =
+              match arr.(Int32.to_int idx) with
+              | P_Char c -> c
+              | _ -> failwith "expected char array"
+            in
+            Jparser.P_Char c :: ss
         | _ -> failwith "foo"
       in
       foo (pc + 1) ss
@@ -133,11 +138,11 @@ let step state get_field
   | '\x55' (*castore*) ->
       let ss =
         match stack with
-        | P_Char c :: P_Int idx :: P_Reference s :: ss ->
-            Bytes.set s (Int32.to_int idx) c;
+        | P_Char c :: P_Int idx :: P_Reference arr :: ss ->
+            arr.(Int32.to_int idx) <- P_Char c;
             ss
-        | P_Int c :: P_Int idx :: P_Reference s :: ss ->
-            Bytes.set s (Int32.to_int idx) (Int32.to_int c |> Char.chr);
+        | P_Int c :: P_Int idx :: P_Reference arr :: ss ->
+            arr.(Int32.to_int idx) <- P_Char (c |> Int32.to_int |> Char.chr);
             ss
         | _ -> failwith "expected reference on stack"
       in
@@ -232,7 +237,7 @@ let step state get_field
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
-      let r = Bytes.create count in
+      let r = Array.make count Jparser.P_ReturnAddress in
       foo (pc + 2) (Jparser.P_Reference r :: stack)
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
