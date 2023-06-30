@@ -1,9 +1,11 @@
+type pType = Jparser.primType [@@deriving show]
+
 type frame = {
   code : string;
   pc : int;
-  fstack : int list;
+  fstack : pType list;
   klass : Jparser.ckd_class;
-  locals : int array;
+  locals : pType array;
 }
 [@@deriving show]
 
@@ -35,10 +37,14 @@ let take_args args stack =
   let stack, racc = ta_helper args stack [] in
   (stack, racc)
 
+let print_pType = function
+  | Jparser.P_Int i -> i |> Int32.to_int |> Printf.printf "%d\n"
+  | _ -> failwith "cannot print this"
+
 let run_native state _ name args =
   match name with
   | "print" ->
-      List.iter (Printf.printf "%d\n") args;
+      List.iter print_pType args;
       state
   | _ -> "native method '" ^ name ^ "' not implemented" |> failwith
 
@@ -57,17 +63,20 @@ let step state get_field
     { state with sstack = { frame with pc; fstack } :: frames }
   in
   match opcode with
-  | '\x04' (*iconst_1*) -> foo (pc + 1) (1 :: stack)
-  | '\x08' (*iconst_5*) -> foo (pc + 1) (5 :: stack)
+  | '\x04' (*iconst_1*) -> foo (pc + 1) (P_Int 1l :: stack)
+  | '\x08' (*iconst_5*) -> foo (pc + 1) (P_Int 5l :: stack)
   | '\x10' (*bipush*) ->
-      let byte = code.[pc + 1] |> Char.code in
-      foo (pc + 2) (byte :: stack)
-  | '\x11' (*sipush*) -> foo (pc + 3) (get_u2 code pc :: stack)
+      let byte = code.[pc + 1] |> Char.code |> Int32.of_int in
+      foo (pc + 2) (P_Int byte :: stack)
+  | '\x11' (*sipush*) ->
+      foo (pc + 3) (P_Int (get_u2 code pc |> Int32.of_int) :: stack)
   | '\x12' (*ldc*) ->
       let idx = code.[pc + 1] |> Char.code in
       let pc, s =
         match c_cls.constant_pool.(idx) with
-        | C_Integer i -> (pc + 2, Int32.to_int i :: stack)
+        | C_Integer i ->
+            let i = Jparser.P_Int i in
+            (pc + 2, i :: stack)
         | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
       in
       foo pc s
@@ -79,26 +88,28 @@ let step state get_field
   | '\x3c' (*istore_1*) ->
       let ss =
         match stack with
-        | s :: ss ->
-            locals.(1) <- s;
+        | P_Int s :: ss ->
+            locals.(1) <- P_Int s;
             ss
-        | [] -> failwith "extected int on stack"
+        | _ -> failwith "extected int on stack"
       in
       foo (pc + 1) ss
   | '\x3d' (*istore_2*) ->
       let ss =
         match stack with
-        | s :: ss ->
-            locals.(2) <- s;
+        | P_Int s :: ss ->
+            locals.(2) <- P_Int s;
             ss
-        | [] -> failwith "expected int on stack"
+        | _ -> failwith "expected int on stack"
       in
       foo (pc + 1) ss
   | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
   | '\x60' (*iadd*) ->
       let stack =
         match stack with
-        | a :: b :: ss -> (a + b) :: ss
+        | P_Int a :: P_Int b :: ss ->
+            let r = Jparser.P_Int (Int32.add a b) in
+            r :: ss
         | _ -> failwith "expected two ints on stack"
       in
       foo (pc + 1) stack
@@ -125,12 +136,7 @@ let step state get_field
         | _ -> failwith "expected field"
       in
       let f = get_field pool c_cls.name klass (name, jtype) in
-      let v =
-        match !f with
-        | Jparser.P_Int i -> i
-        | _ -> failwith "only int implemented"
-      in
-      foo (pc + 3) (Int32.to_int v :: stack)
+      foo (pc + 3) (!f :: stack)
   | '\xb3' (*putstatic*) ->
       let idx = get_u2 code pc in
       let klass, (name, jtype) =
@@ -141,8 +147,9 @@ let step state get_field
       let f = get_field pool c_cls.name klass (name, jtype) in
       let v, stack =
         match (jtype, stack) with
-        | "I", i :: ss -> (Jparser.P_Int (Int32.of_int i), ss)
-        | _ -> failwith "yaoawhfahw"
+        | "I", P_Int v :: ss -> (Jparser.P_Int v, ss)
+        | t, v :: _ -> "putstatic (" ^ t ^ ", " ^ show_pType v ^ ")" |> failwith
+        | _, [] -> "expected sth on stack" |> failwith
       in
       f := v;
       foo (pc + 3) stack
@@ -166,7 +173,7 @@ let step state get_field
             | Some x -> x
             | None -> failwith "class should have been loaded"
           in
-          let locals = Array.make f.max_locals 0 in
+          let locals = Array.make f.max_locals Jparser.P_ReturnAddress in
           List.iteri (Array.set locals) args;
           let new_frame =
             { code = f.code; pc = 0; fstack = []; klass; locals }
@@ -194,7 +201,7 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
       | _ -> main.code
     else main.code
   in
-  let locals = Array.make main.max_locals 0 in
+  let locals = Array.make main.max_locals Jparser.P_ReturnAddress in
   let frame = { code; pc = 0; fstack = []; klass = c_cls; locals } in
   let pool = ref [ (c_cls.name, c_cls) ] in
   let state = ref { sstack = [ frame ]; pool; name } in
