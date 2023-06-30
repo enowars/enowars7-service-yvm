@@ -182,6 +182,18 @@ let step state get_field
             state with
             sstack = new_frame :: { frame with pc = pc + 3; fstack } :: frames;
           })
+  | '\xbc' (*newarray*) ->
+      let atype = code.[pc + 1] |> Char.code in
+      assert (atype = 5);
+      (*only char array supported*)
+      let count, stack =
+        match stack with
+        | P_Int count :: stack -> (Int32.to_int count, stack)
+        | a :: _ -> show_pType a |> failwith
+        | [] -> failwith "empty stack"
+      in
+      let r = Bytes.create count in
+      foo (pc + 2) (Jparser.P_Reference r :: stack)
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
