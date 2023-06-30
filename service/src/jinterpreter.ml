@@ -31,7 +31,10 @@ let take_args args stack =
     match (args, stack) with
     | [], stack -> (stack, acc)
     | _, [] -> failwith "foo"
-    | 'I' :: args, s :: ss -> ta_helper args ss (s :: acc)
+    | 'I' :: args, Jparser.P_Int i :: ss ->
+        ta_helper args ss (Jparser.P_Int i :: acc)
+    | '[' :: 'C' :: args, Jparser.P_Reference arr :: ss ->
+        ta_helper args ss (Jparser.P_Reference arr :: acc)
     | _, _ -> failwith "foo"
   in
   let stack, racc = ta_helper args stack [] in
@@ -39,6 +42,8 @@ let take_args args stack =
 
 let print_pType = function
   | Jparser.P_Int i -> i |> Int32.to_int |> Printf.printf "%d\n"
+  | Jparser.P_Char c -> c |> Printf.printf "%c\n"
+  | Jparser.P_Reference arr -> arr |> Bytes.to_string |> print_endline
   | _ -> failwith "cannot print this"
 
 let run_native state _ name args =
@@ -97,6 +102,14 @@ let step state get_field
   | '\x2b' (*aload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x2c' (*aload_2*) -> foo (pc + 1) (locals.(2) :: stack)
   | '\x2d' (*aload_3*) -> foo (pc + 1) (locals.(3) :: stack)
+  | '\x34' (*caload*) ->
+      let ss =
+        match stack with
+        | P_Int idx :: P_Reference arr :: ss ->
+            Jparser.P_Char (Bytes.get arr (Int32.to_int idx)) :: ss
+        | _ -> failwith "foo"
+      in
+      foo (pc + 1) ss
   | '\x3c' (*istore_1*) ->
       let ss =
         match stack with
@@ -113,6 +126,27 @@ let step state get_field
             locals.(2) <- P_Int s;
             ss
         | _ -> failwith "expected int on stack"
+      in
+      foo (pc + 1) ss
+  | '\x4c' (*astore_1*) ->
+      let ss =
+        match stack with
+        | P_Reference s :: ss ->
+            locals.(1) <- P_Reference s;
+            ss
+        | _ -> failwith "expected reference on stack"
+      in
+      foo (pc + 1) ss
+  | '\x55' (*castore*) ->
+      let ss =
+        match stack with
+        | P_Char c :: P_Int idx :: P_Reference s :: ss ->
+            Bytes.set s (Int32.to_int idx) c;
+            ss
+        | P_Int c :: P_Int idx :: P_Reference s :: ss ->
+            Bytes.set s (Int32.to_int idx) (Int32.to_int c |> Char.chr);
+            ss
+        | _ -> failwith "expected reference on stack"
       in
       foo (pc + 1) ss
   | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
