@@ -33,6 +33,10 @@ let take_args args stack =
     | _, [] -> failwith "foo"
     | 'I' :: args, Jparser.P_Int i :: ss ->
         ta_helper args ss (Jparser.P_Int i :: acc)
+    | 'I' :: args, Jparser.P_Char c :: ss ->
+        ta_helper args ss (Jparser.P_Int (c |> Char.code |> Int32.of_int) :: acc)
+    | 'C' :: args, Jparser.P_Char c :: ss ->
+        ta_helper args ss (Jparser.P_Char c :: acc)
     | '[' :: 'C' :: args, Jparser.P_Reference arr :: ss ->
         ta_helper args ss (Jparser.P_Reference arr :: acc)
     | _, _ -> failwith "foo"
