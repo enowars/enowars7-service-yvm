@@ -1,5 +1,5 @@
 class Foo {
-	native static void print(int x);
+	native static void print(char x);
 
 	public static void main(String[] args) {
 		char[] x = new char[10];
