@@ -7,7 +7,7 @@ type primType =
   | P_Char of char
   | P_Float of float
   | P_Double of float
-  | P_Reference
+  | P_Reference of bytes
   | P_ReturnAddress
 [@@deriving show]
 
