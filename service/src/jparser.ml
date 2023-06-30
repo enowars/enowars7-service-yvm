@@ -1,14 +1,14 @@
 type primType =
-  | Boolean of int
-  | Byte of int
-  | Short of int
-  | Int of int32
-  | Long of int64
-  | Char of char
-  | Float of float
-  | Double of float
-  | Reference
-  | ReturnAddress
+  | P_Boolean of int
+  | P_Byte of int
+  | P_Short of int
+  | P_Int of int32
+  | P_Long of int64
+  | P_Char of char
+  | P_Float of float
+  | P_Double of float
+  | P_Reference
+  | P_ReturnAddress
 [@@deriving show]
 
 type constant =
@@ -357,7 +357,7 @@ let cook_field cp (raw_field : field_info) =
   let dscr = rslv_name cp raw_field.descriptor_index in
   let acc = raw_field.access_flags in
   match dscr with
-  | "I" -> ((name, dscr), (acc, ref (Int 1337l)))
+  | "I" -> ((name, dscr), (acc, ref (P_Int 1337l)))
   | s -> "unsupported field type " ^ s |> failwith
 
 let cook_meth cp raw_meth =

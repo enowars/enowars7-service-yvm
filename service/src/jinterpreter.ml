@@ -127,7 +127,7 @@ let step state get_field
       let f = get_field pool c_cls.name klass (name, jtype) in
       let v =
         match !f with
-        | Jparser.Int i -> i
+        | Jparser.P_Int i -> i
         | _ -> failwith "only int implemented"
       in
       foo (pc + 3) (Int32.to_int v :: stack)
@@ -141,7 +141,7 @@ let step state get_field
       let f = get_field pool c_cls.name klass (name, jtype) in
       let v, stack =
         match (jtype, stack) with
-        | "I", i :: ss -> (Jparser.Int (Int32.of_int i), ss)
+        | "I", i :: ss -> (Jparser.P_Int (Int32.of_int i), ss)
         | _ -> failwith "yaoawhfahw"
       in
       f := v;
