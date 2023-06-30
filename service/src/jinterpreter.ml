@@ -66,7 +66,12 @@ let step state get_field
     { state with sstack = { frame with pc; fstack } :: frames }
   in
   match opcode with
+  | '\x02' (*iconst_m1*) -> foo (pc + 1) (P_Int (-1l) :: stack)
+  | '\x03' (*iconst_0*) -> foo (pc + 1) (P_Int 0l :: stack)
   | '\x04' (*iconst_1*) -> foo (pc + 1) (P_Int 1l :: stack)
+  | '\x05' (*iconst_2*) -> foo (pc + 1) (P_Int 2l :: stack)
+  | '\x06' (*iconst_3*) -> foo (pc + 1) (P_Int 3l :: stack)
+  | '\x07' (*iconst_4*) -> foo (pc + 1) (P_Int 4l :: stack)
   | '\x08' (*iconst_5*) -> foo (pc + 1) (P_Int 5l :: stack)
   | '\x10' (*bipush*) ->
       let byte = code.[pc + 1] |> Char.code |> Int32.of_int in
