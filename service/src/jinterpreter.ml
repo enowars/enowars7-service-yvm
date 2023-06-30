@@ -92,7 +92,10 @@ let step state get_field
   | '\x1a' (*iload_0*) -> foo (pc + 1) (locals.(0) :: stack)
   | '\x1b' (*iload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x1c' (*iload_2*) -> foo (pc + 1) (locals.(2) :: stack)
-  | '\x2a' (*aload_0*) -> failwith "aload_0 not implemented"
+  | '\x2a' (*aload_0*) -> foo (pc + 1) (locals.(0) :: stack)
+  | '\x2b' (*aload_1*) -> foo (pc + 1) (locals.(1) :: stack)
+  | '\x2c' (*aload_2*) -> foo (pc + 1) (locals.(2) :: stack)
+  | '\x2d' (*aload_3*) -> foo (pc + 1) (locals.(3) :: stack)
   | '\x3c' (*istore_1*) ->
       let ss =
         match stack with
