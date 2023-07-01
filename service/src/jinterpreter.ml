@@ -188,6 +188,7 @@ let step state get_field
             arr.(Int32.to_int idx) <- P_Char (c |> Int32.to_int |> Char.chr);
             ss
         | _ -> failwith "expected reference on stack"
+        | _ -> failwith "expected char/int, int, reference on stack"
       in
       foo (pc + 1) ss
   | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
