@@ -307,6 +307,15 @@ let step state get_field
       in
       let r = Array.make count (Jparser.P_Reference None) in
       foo (pc + 3) (Jparser.P_Reference (Some r) :: stack)
+  | '\xbe' (*arraylength*) ->
+      let length, stack =
+        match stack with
+        | P_Reference (Some arr) :: stack -> (Array.length arr, stack)
+        | P_Reference None :: _ -> failwith npe_msg
+        | a :: _ -> show_pType a |> failwith
+        | [] -> failwith "empty stack"
+      in
+      foo (pc + 1) (P_Int (Int32.of_int length) :: stack)
   | '\xc7' (*ifnonnull*) ->
       let is_null, stack = null_on_stack stack in
       foo (if not is_null then get_u2 code pc else pc + 3) stack
