@@ -7,7 +7,7 @@ class Foo {
     static Object f;
 
     private static int getMyInt() {
-            int my = 123 + 456;
+            int my = 123 + 456 + a;
             return my;
     }
 
