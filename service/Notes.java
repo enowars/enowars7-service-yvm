@@ -4,12 +4,21 @@ import java.io.FileWriter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 
+import java.util.Random;
+
 class Notes {
+
+	static Random r = new Random();
 
 	private static char[] errorMsg = {'e', 'r', 'r', 'o', 'r'};
 
 	private static char[] getToken() {
-		return "foobar".toCharArray();
+		int [] is = r.ints(10, 'a', 'z').toArray();
+		char[] cs = new char[is.length];
+		for (int i = 0; i < is.length; i++) {
+			cs[i] = (char) is[i];
+		}
+		return cs;
 	}
 
 	private static boolean mkdir(char[] dir) {
@@ -18,6 +27,8 @@ class Notes {
 
 	private static char[][] ls(char[] dir) {
 		String[] files = new File(new String(dir)).list();
+		if (files == null)
+			return null;
 		char[][] cfiles = new char[files.length][];
 		for (int i = 0; i < files.length; i++) {
 			cfiles[i] = files[i].toCharArray();
@@ -27,6 +38,10 @@ class Notes {
 
 	private static void print(char[] arg) {
 		System.out.println(arg);
+	}
+
+	private static void error(char[] arg) {
+		System.err.println(arg);
 	}
 
 	private static boolean write(char[] file, char[] content) {
@@ -59,12 +74,17 @@ class Notes {
 		if (mkdir(t)) {
 			print(t);
 		} else {
-			print(errorMsg);
+			error(errorMsg);
 		}
 	}
 
 	private static void listNotes(char[] token) {
-		for (char[] note : ls(token)) {
+		char[][] notes = ls(token);
+		if (notes == null) {
+			error(errorMsg);
+			return;
+		}
+		for (char[] note : notes) {
 			print(note);
 		}
 	}
@@ -83,12 +103,20 @@ class Notes {
 
 	private static void addNote(char[] token, char[] name, char[] content) {
 		char[] path = toPath(token, name);
-		write(path, content);
+		if (!write(path, content)) {
+			error(errorMsg);
+			return;
+		}
 	}
 
 	private static void getNote(char[] token, char[] name) {
 		char[] path = toPath(token, name);
-		print(read(path));
+		char[] r = read(path);
+		if (r == null) {
+			error(errorMsg);
+			return;
+		}
+		print(r);
 	}
 
 	public static void run(char[][] args) {
