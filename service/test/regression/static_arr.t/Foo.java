@@ -1,5 +1,9 @@
 class Foo {
-	static char[] x;
+	static char[] x = { 's', 'u', 'c', 'c' };
 
-	public static void main(String[] args) { }
+	static native void print(char[] x);
+
+	public static void main(String[] args) {
+		print(x);
+	}
 }
