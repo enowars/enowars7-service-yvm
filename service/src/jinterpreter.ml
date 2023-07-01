@@ -251,6 +251,8 @@ let step state get_field
       let v, stack =
         match (jtype, stack) with
         | "I", P_Int v :: ss -> (Jparser.P_Int v, ss)
+        | s, P_Reference r :: ss when String.get s 0 = '[' ->
+            (Jparser.P_Reference r, ss)
         | t, v :: _ -> "putstatic (" ^ t ^ ", " ^ show_pType v ^ ")" |> failwith
         | _, [] -> "expected sth on stack" |> failwith
       in
