@@ -11,6 +11,9 @@ type frame = {
 
 type state = { sstack : frame list; pool : Classpool.t; name : string }
 
+let npe_msg =
+  "Though Exceptions are not implemented, but: https://youtu.be/bLHL75H_VEM"
+
 let get_u2 code pc =
   let b1 = (code.[pc + 1] |> Char.code) lsl 8 in
   let b2 = code.[pc + 2] |> Char.code in
@@ -56,7 +59,8 @@ let print_pType pt =
   let rec print_pType_h = function
     | Jparser.P_Int i -> i |> Int32.to_int |> Printf.printf "%d"
     | Jparser.P_Char c -> c |> Printf.printf "%c"
-    | Jparser.P_Reference arr -> arr |> Array.iter print_pType_h
+    | Jparser.P_Reference (Some arr) -> arr |> Array.iter print_pType_h
+    | Jparser.P_Reference None -> print_string "nil"
     | _ -> failwith "cannot print this"
   in
   print_pType_h pt;
@@ -83,6 +87,12 @@ let istore_n n locals = function
       locals.(n) <- Jparser.P_Int i;
       ss
   | _ -> failwith "expected int on stack"
+
+let null_on_stack = function
+  | Jparser.P_Reference (Some _) :: stack -> (false, stack)
+  | Jparser.P_Reference None :: stack -> (true, stack)
+  | a :: _ -> show_pType a |> failwith
+  | [] -> failwith "empty stack"
 
 let step state get_field
     (get_method :
@@ -135,26 +145,28 @@ let step state get_field
   | '\x32' (*aaload*) ->
       let ss =
         match stack with
-        | P_Int idx :: P_Reference arr :: ss ->
+        | P_Int idx :: P_Reference (Some arr) :: ss ->
             let a =
               match arr.(Int32.to_int idx) with
-              | P_Reference a -> a
+              | Jparser.P_Reference a -> a
               | _ -> failwith "expected arr array"
             in
             Jparser.P_Reference a :: ss
+        | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | _ -> failwith "foo"
       in
       foo (pc + 1) ss
   | '\x34' (*caload*) ->
       let ss =
         match stack with
-        | P_Int idx :: P_Reference arr :: ss ->
+        | P_Int idx :: P_Reference (Some arr) :: ss ->
             let c =
               match arr.(Int32.to_int idx) with
               | P_Char c -> c
               | _ -> failwith "expected char array"
             in
             Jparser.P_Char c :: ss
+        | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | _ -> failwith "foo"
       in
       foo (pc + 1) ss
@@ -172,22 +184,24 @@ let step state get_field
   | '\x53' (*aastore*) ->
       let ss =
         match stack with
-        | P_Reference a :: P_Int idx :: P_Reference arr :: ss ->
+        | P_Reference a :: P_Int idx :: P_Reference (Some arr) :: ss ->
             arr.(Int32.to_int idx) <- P_Reference a;
             ss
+        | P_Reference _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | _ -> failwith "expected reference on stack"
       in
       foo (pc + 1) ss
   | '\x55' (*castore*) ->
       let ss =
         match stack with
-        | P_Char c :: P_Int idx :: P_Reference arr :: ss ->
+        | P_Char c :: P_Int idx :: P_Reference (Some arr) :: ss ->
             arr.(Int32.to_int idx) <- P_Char c;
             ss
-        | P_Int c :: P_Int idx :: P_Reference arr :: ss ->
+        | P_Int c :: P_Int idx :: P_Reference (Some arr) :: ss ->
             arr.(Int32.to_int idx) <- P_Char (c |> Int32.to_int |> Char.chr);
             ss
-        | _ -> failwith "expected reference on stack"
+        | P_Char _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
+        | P_Int _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | _ -> failwith "expected char/int, int, reference on stack"
       in
       foo (pc + 1) ss
@@ -280,8 +294,8 @@ let step state get_field
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
-      let r = Array.make count Jparser.P_ReturnAddress in
-      foo (pc + 2) (Jparser.P_Reference r :: stack)
+      let r = Array.make count (Jparser.P_Char (Char.chr 0)) in
+      foo (pc + 2) (Jparser.P_Reference (Some r) :: stack)
   | '\xbd' (*anewarray*) ->
       let count, stack =
         match stack with
@@ -289,8 +303,14 @@ let step state get_field
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
-      let r = Array.make count Jparser.P_ReturnAddress in
-      foo (pc + 3) (Jparser.P_Reference r :: stack)
+      let r = Array.make count (Jparser.P_Reference None) in
+      foo (pc + 3) (Jparser.P_Reference (Some r) :: stack)
+  | '\xc7' (*ifnonnull*) ->
+      let is_null, stack = null_on_stack stack in
+      foo (if not is_null then get_u2 code pc else pc + 3) stack
+  | '\xc8' (*ifnull*) ->
+      let is_null, stack = null_on_stack stack in
+      foo (if is_null then get_u2 code pc else pc + 3) stack
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
