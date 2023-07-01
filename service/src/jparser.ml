@@ -7,7 +7,7 @@ type primType =
   | P_Char of char
   | P_Float of float
   | P_Double of float
-  | P_Reference of primType array
+  | P_Reference of primType array option
   | P_ReturnAddress
 [@@deriving show]
 
@@ -358,8 +358,7 @@ let cook_field cp (raw_field : field_info) =
   let acc = raw_field.access_flags in
   match dscr with
   | "I" -> ((name, dscr), (acc, ref (P_Int 1337l)))
-  | s when String.get s 0 = '[' ->
-      ((name, dscr), (acc, ref (P_Reference (Array.make 0 P_ReturnAddress))))
+  | s when String.get s 0 = '[' -> ((name, dscr), (acc, ref (P_Reference None)))
   | s -> "unsupported field type " ^ s |> failwith
 
 let cook_meth cp raw_meth =
