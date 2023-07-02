@@ -259,6 +259,7 @@ let step state get_field
   | '\xa2' (*if_icmpge*) -> branch (cmp_on_stack ( >= ))
   | '\xa3' (*if_icmpgt*) -> branch (cmp_on_stack ( > ))
   | '\xa4' (*if_icmple*) -> branch (cmp_on_stack ( <= ))
+  | '\xa7' (*goto*) -> branch (fun s -> (true, s))
   | '\xac' (*ireturn*) ->
       let i =
         match stack with
