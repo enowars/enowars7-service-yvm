@@ -2,11 +2,12 @@ open Yvm_lib
 
 let () =
   let klass =
-    match Sys.argv with
-    | [| _; klass |] ->
-        if String.ends_with ~suffix:".class" klass then klass
-        else failwith "file doesn't end with '.class'"
-    | _ -> failwith "expecting a single class file as arg"
+    if Array.length Sys.argv > 1 then Sys.argv.(1)
+    else failwith "expecting class file as first arg"
+  in
+  let klass =
+    if String.ends_with ~suffix:".class" klass then klass
+    else failwith "file doesn't end with '.class'"
   in
   let r_cls = Jparser.parse_class klass in
   let c_cls = Jparser.cook_class r_cls in
