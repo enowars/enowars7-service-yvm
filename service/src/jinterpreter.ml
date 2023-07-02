@@ -135,6 +135,9 @@ let step state get_field
         | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
       in
       foo pc s
+  | '\x15' (*iload*) ->
+      let idx = code.[pc + 1] |> Char.code in
+      foo (pc + 2) (locals.(idx) :: stack)
   | '\x19' (*aload*) ->
       let idx = code.[pc + 1] |> Char.code in
       foo (pc + 2) (locals.(idx) :: stack)
@@ -174,6 +177,9 @@ let step state get_field
         | _ -> failwith "foo"
       in
       foo (pc + 1) ss
+  | '\x36' (*istore*) ->
+      let idx = code.[pc + 1] |> Char.code in
+      foo (pc + 2) (istore_n idx locals stack)
   | '\x3a' (*astore*) ->
       let idx = code.[pc + 1] |> Char.code in
       foo (pc + 2) (astore_n idx locals stack)
