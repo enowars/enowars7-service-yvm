@@ -121,9 +121,7 @@ let cmp_on_stack cmp = function
       failwith "foo"
   | _ -> failwith "foo"
 
-let step state get_field
-    (get_method :
-      Classpool.t -> string -> string -> string * string -> Jparser.meth) =
+let step state =
   let { sstack; pool; _ } = state in
   let frame, frames =
     match sstack with
@@ -134,6 +132,13 @@ let step state get_field
   let opcode = code.[pc] in
   let foo pc fstack =
     { state with sstack = { frame with pc; fstack } :: frames }
+  in
+  let push_clinit_frame (c_cls, (clinit : Jparser.lmeth)) =
+    let locals = Array.make clinit.max_locals Jparser.P_ReturnAddress in
+    let clinit_frame =
+      { code = clinit.code; pc = 0; fstack = []; klass = c_cls; locals }
+    in
+    { state with sstack = clinit_frame :: frame :: frames }
   in
   let branch cond =
     let take_branch, stack = cond stack in
@@ -348,8 +353,12 @@ let step state get_field
         | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
         | _ -> failwith "expected field"
       in
-      let f = get_field pool c_cls.name klass (name, jtype) in
-      foo (pc + 3) (!f :: stack)
+      let s =
+        match Classpool.get_field pool c_cls.name klass (name, jtype) with
+        | Ok f -> foo (pc + 3) (!f :: stack)
+        | Error semiloaded_cls -> push_clinit_frame semiloaded_cls
+      in
+      s
   | '\xb3' (*putstatic*) ->
       let idx = get_i16 code pc in
       let klass, (name, jtype) =
@@ -357,17 +366,23 @@ let step state get_field
         | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
         | _ -> failwith "expected field"
       in
-      let f = get_field pool c_cls.name klass (name, jtype) in
-      let v, stack =
-        match (jtype, stack) with
-        | "I", P_Int v :: ss -> (Jparser.P_Int v, ss)
-        | s, P_Reference r :: ss when String.get s 0 = '[' ->
-            (Jparser.P_Reference r, ss)
-        | t, v :: _ -> "putstatic (" ^ t ^ ", " ^ show_pType v ^ ")" |> failwith
-        | _, [] -> "expected sth on stack" |> failwith
+      let s =
+        match Classpool.get_field pool c_cls.name klass (name, jtype) with
+        | Ok f ->
+            let v, stack =
+              match (jtype, stack) with
+              | "I", P_Int v :: ss -> (Jparser.P_Int v, ss)
+              | s, P_Reference r :: ss when String.get s 0 = '[' ->
+                  (Jparser.P_Reference r, ss)
+              | t, v :: _ ->
+                  "putstatic (" ^ t ^ ", " ^ show_pType v ^ ")" |> failwith
+              | _, [] -> "expected sth on stack" |> failwith
+            in
+            f := v;
+            foo (pc + 3) stack
+        | Error semiloaded_cls -> push_clinit_frame semiloaded_cls
       in
-      f := v;
-      foo (pc + 3) stack
+      s
   | '\xb8' (*invokestatic*) -> (
       let idx = get_i16 code pc in
       let klass, (name, jtype) =
@@ -377,11 +392,11 @@ let step state get_field
       in
       let args = get_args_str jtype in
       let fstack, args = take_args args stack in
-      match get_method pool c_cls.name klass (name, jtype) with
-      | Jparser.NativeMeth ->
+      match Classpool.get_method pool c_cls.name klass (name, jtype) with
+      | Ok Jparser.NativeMeth ->
           let state = foo (pc + 3) fstack in
           run_native state klass name args
-      | Jparser.LocalMeth f ->
+      | Ok (Jparser.LocalMeth f) ->
           let klass =
             match List.assoc_opt klass !pool with
             | Some x -> x
@@ -395,7 +410,8 @@ let step state get_field
           {
             state with
             sstack = new_frame :: { frame with pc = pc + 3; fstack } :: frames;
-          })
+          }
+      | Error semiloaded_cls -> push_clinit_frame semiloaded_cls)
   | '\xbc' (*newarray*) ->
       let atype = code.[pc + 1] |> Char.code in
       assert (atype = 5);
@@ -435,7 +451,7 @@ let step state get_field
   | '\xc8' (*ifnull*) -> branch null_on_stack
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
-let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
+let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
     match List.assoc_opt (name, jtype) c_cls.meths with
     | Some (Jparser.LocalMeth main) -> main
@@ -456,13 +472,11 @@ let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
   let frame = { code; pc = 0; fstack = []; klass = c_cls; locals } in
   let pool = ref [ (c_cls.name, c_cls) ] in
   let state = ref { sstack = [ frame ]; pool; name } in
-  let get_field = Classpool.get_field run in
-  let get_method = Classpool.get_method run in
   let i = ref 0 in
   while !state.sstack != [] do
     let _ =
       if !i > 10000 then failwith "more than 10k instructions: aborting"
       else incr i
     in
-    state := step !state get_field get_method
+    state := step !state
   done
