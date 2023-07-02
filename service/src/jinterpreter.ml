@@ -241,6 +241,18 @@ let step state get_field
         | _ -> failwith "expected two ints on stack"
       in
       foo (pc + 1) stack
+  | '\x84' (*iinc*) ->
+      let idx = code.[pc + 1] |> Char.code in
+      let cnst = code.[pc + 2] |> Char.code in
+      let v =
+        match locals.(idx) with
+        | Jparser.P_Int i ->
+            Jparser.P_Int (Int32.to_int i + cnst |> Int32.of_int)
+        | Jparser.P_Char c -> Jparser.P_Int (Char.code c + cnst |> Int32.of_int)
+        | s -> s |> show_pType |> failwith
+      in
+      locals.(idx) <- v;
+      foo (pc + 1) stack
   | '\x9f' (*if_icmpeq*) -> branch (cmp_on_stack ( = ))
   | '\xa0' (*if_icmpne*) -> branch (cmp_on_stack ( != ))
   | '\xa1' (*if_icmplt*) -> branch (cmp_on_stack ( < ))
