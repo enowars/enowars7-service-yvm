@@ -260,6 +260,30 @@ let step state get_field
   | '\xa3' (*if_icmpgt*) -> branch (cmp_on_stack ( > ))
   | '\xa4' (*if_icmple*) -> branch (cmp_on_stack ( <= ))
   | '\xa7' (*goto*) -> branch (fun s -> (true, s))
+  | '\xaa' (*tableswitch*) ->
+      let padded_pc =
+        match pc mod 4 with
+        | 0 -> pc
+        | 1 -> pc + 3
+        | 2 -> pc + 2
+        | 3 -> pc + 1
+        | _ -> failwith "foo"
+      in
+      let idx, stack =
+        match stack with
+        | Jparser.P_Int i :: stack -> (i |> Int32.to_int, stack)
+        | Jparser.P_Char c :: stack -> (c |> Char.code, stack)
+        | s :: _ -> s |> show_pType |> failwith
+        | _ -> failwith "foo"
+      in
+      let low = String.get_int32_be code (padded_pc + 4) |> Int32.to_int in
+      let high = String.get_int32_be code (padded_pc + 8) |> Int32.to_int in
+      let in_range = low <= idx && idx <= high in
+      let ji =
+        if in_range then padded_pc + 12 + ((idx - low) * 4) else padded_pc
+      in
+      let jump = String.get_int32_be code ji |> Int32.to_int in
+      foo (pc + jump) stack
   | '\xab' (*lookupswitch*) ->
       let padded_pc =
         match pc mod 4 with
