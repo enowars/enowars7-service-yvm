@@ -14,10 +14,7 @@ type state = { sstack : frame list; pool : Classpool.t; name : string }
 let npe_msg =
   "Though Exceptions are not implemented, but: https://youtu.be/bLHL75H_VEM"
 
-let get_u2 code pc =
-  let b1 = (code.[pc + 1] |> Char.code) lsl 8 in
-  let b2 = code.[pc + 2] |> Char.code in
-  b1 lor b2
+let get_i16 code pc = String.get_int16_be code (pc + 1)
 
 let rec check_inv_helper = function
   | ')' :: ret, [] -> Some ret
@@ -123,7 +120,7 @@ let step state get_field
   in
   let branch cond =
     let take_branch, stack = cond stack in
-    foo (if take_branch then pc + get_u2 code pc else pc + 3) stack
+    foo (if take_branch then pc + get_i16 code pc else pc + 3) stack
   in
   match opcode with
   | '\x01' (*aconst_null*) -> foo (pc + 1) (P_Reference None :: stack)
@@ -138,7 +135,7 @@ let step state get_field
       let byte = code.[pc + 1] |> Char.code |> Int32.of_int in
       foo (pc + 2) (P_Int byte :: stack)
   | '\x11' (*sipush*) ->
-      foo (pc + 3) (P_Int (get_u2 code pc |> Int32.of_int) :: stack)
+      foo (pc + 3) (P_Int (get_i16 code pc |> Int32.of_int) :: stack)
   | '\x12' (*ldc*) ->
       let idx = code.[pc + 1] |> Char.code in
       let pc, s =
@@ -274,7 +271,7 @@ let step state get_field
       { state with sstack = frames }
   | '\xb1' (*return*) -> { state with sstack = frames }
   | '\xb2' (*getstatic*) ->
-      let idx = get_u2 code pc in
+      let idx = get_i16 code pc in
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
@@ -283,7 +280,7 @@ let step state get_field
       let f = get_field pool c_cls.name klass (name, jtype) in
       foo (pc + 3) (!f :: stack)
   | '\xb3' (*putstatic*) ->
-      let idx = get_u2 code pc in
+      let idx = get_i16 code pc in
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
@@ -301,7 +298,7 @@ let step state get_field
       f := v;
       foo (pc + 3) stack
   | '\xb8' (*invokestatic*) -> (
-      let idx = get_u2 code pc in
+      let idx = get_i16 code pc in
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
