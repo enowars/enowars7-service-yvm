@@ -11,5 +11,6 @@ services:
     build: .
     volumes:
       - ./classes:/var/www/html/classes
+      - ./notes:/var/www/html/notes
     hostname: yvm
     container_name: yvm-service
