@@ -253,7 +253,7 @@ let step state get_field
         | s -> s |> show_pType |> failwith
       in
       locals.(idx) <- v;
-      foo (pc + 1) stack
+      foo (pc + 3) stack
   | '\x9f' (*if_icmpeq*) -> branch (cmp_on_stack ( = ))
   | '\xa0' (*if_icmpne*) -> branch (cmp_on_stack ( != ))
   | '\xa1' (*if_icmplt*) -> branch (cmp_on_stack ( < ))
