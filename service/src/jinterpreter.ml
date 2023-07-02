@@ -86,6 +86,10 @@ let istore_n n locals = function
   | Jparser.P_Int i :: ss ->
       locals.(n) <- Jparser.P_Int i;
       ss
+  | Jparser.P_Char c :: ss ->
+      locals.(n) <- Jparser.P_Int (c |> Char.code |> Int32.of_int);
+      ss
+  | s :: _ -> s |> show_pType |> failwith
   | _ -> failwith "expected int on stack"
 
 let null_on_stack = function
