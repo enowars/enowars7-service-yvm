@@ -12,7 +12,7 @@ type frame = {
 type state = { sstack : frame list; pool : Classpool.t; name : string }
 
 let npe_msg =
-  "Though Exceptions are not implemented, but: https://youtu.be/bLHL75H_VEM"
+  "Exceptions are not implemented, but: https://youtu.be/bLHL75H_VEM"
 
 let get_i16 code pc = String.get_int16_be code (pc + 1)
 
