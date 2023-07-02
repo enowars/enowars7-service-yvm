@@ -32,7 +32,7 @@ let get_token () =
 let mkdir dir =
   let dir = to_str dir in
   try
-    Sys.mkdir dir 0x755;
+    Sys.mkdir dir 0o755;
     Jparser.P_Int 1l
   with Sys_error _ -> Jparser.P_Int 0l
 
