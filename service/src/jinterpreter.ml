@@ -98,6 +98,15 @@ let null_on_stack = function
   | a :: _ -> show_pType a |> failwith
   | [] -> failwith "empty stack"
 
+let cmp_on_stack cmp = function
+  | Jparser.P_Int v2 :: Jparser.P_Int v1 :: stack ->
+      (cmp (Int32.to_int v1) (Int32.to_int v2), stack)
+  | a :: b :: _ ->
+      a |> show_pType |> print_endline;
+      b |> show_pType |> print_endline;
+      failwith "foo"
+  | _ -> failwith "foo"
+
 let step state get_field
     (get_method :
       Classpool.t -> string -> string -> string * string -> Jparser.meth) =
@@ -232,6 +241,12 @@ let step state get_field
         | _ -> failwith "expected two ints on stack"
       in
       foo (pc + 1) stack
+  | '\x9f' (*if_icmpeq*) -> branch (cmp_on_stack ( = ))
+  | '\xa0' (*if_icmpne*) -> branch (cmp_on_stack ( != ))
+  | '\xa1' (*if_icmplt*) -> branch (cmp_on_stack ( < ))
+  | '\xa2' (*if_icmpge*) -> branch (cmp_on_stack ( >= ))
+  | '\xa3' (*if_icmpgt*) -> branch (cmp_on_stack ( > ))
+  | '\xa4' (*if_icmple*) -> branch (cmp_on_stack ( <= ))
   | '\xac' (*ireturn*) ->
       let i =
         match stack with
