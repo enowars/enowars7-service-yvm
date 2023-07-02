@@ -359,6 +359,18 @@ let step state =
         | [] -> failwith "foo"
       in
       { state with sstack = frames }
+  | '\xb0' (*areturn*) ->
+      let r =
+        match stack with
+        | Jparser.P_Reference r :: _ -> Jparser.P_Reference r
+        | _ -> failwith "ireturn: expected reference on stack"
+      in
+      let frames =
+        match frames with
+        | f :: fs -> { f with fstack = r :: f.fstack } :: fs
+        | [] -> failwith "foo"
+      in
+      { state with sstack = frames }
   | '\xb1' (*return*) -> { state with sstack = frames }
   | '\xb2' (*getstatic*) ->
       let idx = get_i16 code pc in
