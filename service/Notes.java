@@ -1,73 +1,22 @@
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-
-import java.util.Random;
-
 class Notes {
-
-	static Random r = new Random();
 
 	private static char[] errorMsg = {'e', 'r', 'r', 'o', 'r'};
 
-	private static char[] getToken() {
-		int [] is = r.ints(10, 'a', 'z').toArray();
-		char[] cs = new char[is.length];
-		for (int i = 0; i < is.length; i++) {
-			cs[i] = (char) is[i];
-		}
-		return cs;
-	}
+	private native static char[][] getArgs();
 
-	private static boolean mkdir(char[] dir) {
-		return new File(new String(dir)).mkdir();
-	}
+	private native static char[] getToken();
 
-	private static char[][] ls(char[] dir) {
-		String[] files = new File(new String(dir)).list();
-		if (files == null)
-			return null;
-		char[][] cfiles = new char[files.length][];
-		for (int i = 0; i < files.length; i++) {
-			cfiles[i] = files[i].toCharArray();
-		}
-		return cfiles;
-	}
+	private native static boolean mkdir(char[] dir);
 
-	private static void print(char[] arg) {
-		System.out.println(arg);
-	}
+	private native static char[][] ls(char[] dir);
 
-	private static void error(char[] arg) {
-		System.err.println(arg);
-	}
+	private native static void print(char[] arg);
 
-	private static boolean write(char[] file, char[] content) {
-		// TODO write once!!
-		try {
-			BufferedWriter writer = new BufferedWriter(new FileWriter(new String(file)));
-			writer.write(new String(content));
-			writer.close();
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
-	}
+	private native static void error(char[] arg);
 
-	private static char[] read(char[] file) {
-		StringBuilder resultStringBuilder = new StringBuilder();
-		try (BufferedReader br = new BufferedReader(new FileReader(new String(file)))) {
-			String line;
-			while ((line = br.readLine()) != null) {
-				resultStringBuilder.append(line).append("\n");
-			}
-		} catch (Exception e) {
-			return null;
-		}
-		return resultStringBuilder.toString().toCharArray();
-	}
+	private native static boolean write(char[] file, char[] content);
+
+	private native static char[] read(char[] file);
 
 	private static void register() {
 		char[] t = getToken();
@@ -119,7 +68,11 @@ class Notes {
 		print(r);
 	}
 
-	public static void run(char[][] args) {
+	public static void main(String[] _args) {
+		char[][] args = getArgs();
+		for (char[] arg : args) {
+			print(arg);
+		}
 		char cmd = args[0][0];
 		switch (cmd) {
 			case 'r':
@@ -135,13 +88,5 @@ class Notes {
 				getNote(args[1], args[2]);
 				break;
 		}
-	}
-
-	public static void main(String[] args) {
-		char[][] cargs = new char[args.length][];
-		for (int i = 0; i < args.length; i++) {
-			cargs[i] = args[i].toCharArray();
-		}
-		run(cargs);
 	}
 }
