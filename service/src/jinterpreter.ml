@@ -121,6 +121,14 @@ let cmp_two_on_stack cmp = function
       failwith "foo"
   | _ -> failwith "foo"
 
+let cmp_stack_with_zero cmp = function
+  | Jparser.P_Int v :: stack -> (cmp (Int32.to_int v) 0, stack)
+  | a :: b :: _ ->
+      a |> show_pType |> print_endline;
+      b |> show_pType |> print_endline;
+      failwith "foo"
+  | _ -> failwith "foo"
+
 let step state =
   let { sstack; pool; _ } = state in
   let frame, frames =
@@ -273,6 +281,12 @@ let step state =
       in
       locals.(idx) <- v;
       foo (pc + 3) stack
+  | '\x99' (*ifeq*) -> branch (cmp_stack_with_zero ( = ))
+  | '\x9a' (*ifne*) -> branch (cmp_stack_with_zero ( != ))
+  | '\x9b' (*iflt*) -> branch (cmp_stack_with_zero ( < ))
+  | '\x9c' (*ifge*) -> branch (cmp_stack_with_zero ( >= ))
+  | '\x9d' (*ifgt*) -> branch (cmp_stack_with_zero ( > ))
+  | '\x9e' (*ifle*) -> branch (cmp_stack_with_zero ( <= ))
   | '\x9f' (*if_icmpeq*) -> branch (cmp_two_on_stack ( = ))
   | '\xa0' (*if_icmpne*) -> branch (cmp_two_on_stack ( != ))
   | '\xa1' (*if_icmplt*) -> branch (cmp_two_on_stack ( < ))
