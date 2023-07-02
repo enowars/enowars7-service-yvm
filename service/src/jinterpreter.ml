@@ -457,21 +457,22 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
     | Some (Jparser.LocalMeth main) -> main
     | _ -> failwith ("Method " ^ name ^ jtype ^ " not found")
   in
-  let cut_last_char s =
-    let len = String.length s in
-    String.sub s 0 (len - 1)
-  in
-  let code =
-    if name = "main" && jtype = "([Ljava/lang/String;)V" then
-      match List.assoc_opt ("<clinit>", "()V") c_cls.meths with
-      | Some (Jparser.LocalMeth static) -> cut_last_char static.code ^ main.code
-      | _ -> main.code
-    else main.code
-  in
   let locals = Array.make main.max_locals Jparser.P_ReturnAddress in
-  let frame = { code; pc = 0; fstack = []; klass = c_cls; locals } in
+  let main_frame =
+    { code = main.code; pc = 0; fstack = []; klass = c_cls; locals }
+  in
   let pool = ref [ (c_cls.name, c_cls) ] in
-  let state = ref { sstack = [ frame ]; pool; name } in
+  let sstack =
+    match List.assoc_opt ("<clinit>", "()V") c_cls.meths with
+    | Some (Jparser.LocalMeth clinit) ->
+        let locals = Array.make clinit.max_locals Jparser.P_ReturnAddress in
+        let clinit_frame =
+          { code = clinit.code; pc = 0; fstack = []; klass = c_cls; locals }
+        in
+        [ clinit_frame; main_frame ]
+    | _ -> [ main_frame ]
+  in
+  let state = ref { sstack; pool; name } in
   let i = ref 0 in
   while !state.sstack != [] do
     let _ =
