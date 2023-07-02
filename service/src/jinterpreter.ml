@@ -123,7 +123,7 @@ let step state get_field
   in
   let branch cond =
     let take_branch, stack = cond stack in
-    foo (if take_branch then get_u2 code pc else pc + 3) stack
+    foo (if take_branch then pc + get_u2 code pc else pc + 3) stack
   in
   match opcode with
   | '\x01' (*aconst_null*) -> foo (pc + 1) (P_Reference None :: stack)
