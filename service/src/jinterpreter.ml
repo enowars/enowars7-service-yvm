@@ -65,15 +65,30 @@ let print_pType pt =
   print_pType_h pt;
   print_newline ()
 
-let run_native state _ name args =
-  match name with
-  | "print" ->
+let run_native state klass name args =
+  let frame = List.hd state.sstack in
+  let frames = List.tl state.sstack in
+  let push v =
+    { state with sstack = { frame with fstack = v :: frame.fstack } :: frames }
+  in
+  match (klass, name, args) with
+  | _, "print", args ->
       List.iter print_pType args;
       state
-  | "dump" ->
+  | _, "dump", [] ->
       state.pool |> Classpool.show |> print_endline;
       state
-  | _ -> "native method '" ^ name ^ "' not implemented" |> failwith
+  | "Notes", "getArgs", [] -> push (Native.get_args ())
+  | "Notes", "getToken", [] -> push (Native.get_token ())
+  | "Notes", "mkdir", dir :: [] -> push (Native.mkdir dir)
+  | "Notes", "ls", dir :: [] -> push (Native.ls dir)
+  | "Notes", "error", arg :: [] ->
+      Native.error arg;
+      state
+  | "Notes", "write", [ f; c ] -> push (Native.write f c)
+  | "Notes", "read", f :: [] -> push (Native.read f)
+  | _ ->
+      "native method '" ^ klass ^ "::" ^ name ^ "' not implemented" |> failwith
 
 let astore_n n locals = function
   | Jparser.P_Reference s :: ss ->
