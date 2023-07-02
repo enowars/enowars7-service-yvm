@@ -16,7 +16,9 @@ let str_to_prt str =
        (str |> String.to_seq |> Array.of_seq
        |> Array.map (fun c -> Jparser.P_Char c)))
 
-let get_args () = Jparser.P_Reference (Some (Array.map str_to_prt Sys.argv))
+let get_args () =
+  let argv = Array.sub Sys.argv 2 (Array.length Sys.argv - 2) in
+  Jparser.P_Reference (Some (Array.map str_to_prt argv))
 
 let get_token () =
   let l = 20 in
