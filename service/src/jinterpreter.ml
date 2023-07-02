@@ -260,6 +260,35 @@ let step state get_field
   | '\xa3' (*if_icmpgt*) -> branch (cmp_on_stack ( > ))
   | '\xa4' (*if_icmple*) -> branch (cmp_on_stack ( <= ))
   | '\xa7' (*goto*) -> branch (fun s -> (true, s))
+  | '\xab' (*lookupswitch*) ->
+      let padded_pc =
+        match pc mod 4 with
+        | 0 -> pc
+        | 1 -> pc + 3
+        | 2 -> pc + 2
+        | 3 -> pc + 1
+        | _ -> failwith "foo"
+      in
+      let key, stack =
+        match stack with
+        | Jparser.P_Int i :: stack -> (i, stack)
+        | Jparser.P_Char c :: stack -> (c |> Char.code |> Int32.of_int, stack)
+        | s :: _ -> s |> show_pType |> failwith
+        | _ -> failwith "foo"
+      in
+      let default = String.get_int32_be code padded_pc |> Int32.to_int in
+      let n_pairs = String.get_int32_be code (padded_pc + 4) |> Int32.to_int in
+      let read_pair offset =
+        let offset = padded_pc + 8 (*defl, nprs*) + (offset * 8) in
+        (String.get_int32_be code offset, String.get_int32_be code (offset + 4))
+      in
+      let table = List.init n_pairs Fun.id |> List.map read_pair in
+      let jump =
+        match List.assoc_opt key table with
+        | Some j -> j |> Int32.to_int
+        | None -> default
+      in
+      foo (pc + jump) stack
   | '\xac' (*ireturn*) ->
       let i =
         match stack with
