@@ -1,6 +1,7 @@
 open Yvm_lib
 
 let () =
+  Random.self_init ();
   let klass =
     if Array.length Sys.argv > 1 then Sys.argv.(1)
     else failwith "expecting class file as first arg"
