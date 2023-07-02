@@ -126,6 +126,7 @@ let step state get_field
     foo (if take_branch then get_u2 code pc else pc + 3) stack
   in
   match opcode with
+  | '\x01' (*aconst_null*) -> foo (pc + 1) (P_Reference None :: stack)
   | '\x02' (*iconst_m1*) -> foo (pc + 1) (P_Int (-1l) :: stack)
   | '\x03' (*iconst_0*) -> foo (pc + 1) (P_Int 0l :: stack)
   | '\x04' (*iconst_1*) -> foo (pc + 1) (P_Int 1l :: stack)
