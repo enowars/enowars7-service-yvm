@@ -70,9 +70,6 @@ class Notes {
 
 	public static void main(String[] _args) {
 		char[][] args = getArgs();
-		for (char[] arg : args) {
-			print(arg);
-		}
 		char cmd = args[0][0];
 		switch (cmd) {
 			case 'r':
