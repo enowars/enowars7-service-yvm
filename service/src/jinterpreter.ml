@@ -112,6 +112,10 @@ let step state get_field
   let foo pc fstack =
     { state with sstack = { frame with pc; fstack } :: frames }
   in
+  let branch cond =
+    let take_branch, stack = cond stack in
+    foo (if take_branch then get_u2 code pc else pc + 3) stack
+  in
   match opcode with
   | '\x02' (*iconst_m1*) -> foo (pc + 1) (P_Int (-1l) :: stack)
   | '\x03' (*iconst_0*) -> foo (pc + 1) (P_Int 0l :: stack)
@@ -327,11 +331,12 @@ let step state get_field
       in
       foo (pc + 1) (P_Int (Int32.of_int length) :: stack)
   | '\xc7' (*ifnonnull*) ->
-      let is_null, stack = null_on_stack stack in
-      foo (if not is_null then get_u2 code pc else pc + 3) stack
-  | '\xc8' (*ifnull*) ->
-      let is_null, stack = null_on_stack stack in
-      foo (if is_null then get_u2 code pc else pc + 3) stack
+      let non_null_on_stack s =
+        let is_true, s = null_on_stack s in
+        (not is_true, s)
+      in
+      branch non_null_on_stack
+  | '\xc8' (*ifnull*) -> branch null_on_stack
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let rec run (c_cls : Jparser.ckd_class) (name, jtype) =
