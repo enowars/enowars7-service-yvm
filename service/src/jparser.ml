@@ -123,6 +123,7 @@ type ckd_class = {
 }
 [@@deriving show]
 
+(* TODO kaputt bei signed input?! *)
 let input_u2 ic =
   let b1 = input_byte ic lsl 8 in
   let b2 = input_byte ic in
