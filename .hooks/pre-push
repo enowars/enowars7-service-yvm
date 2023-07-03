@@ -5,10 +5,7 @@
 # Redirect output to stderr.
 exec 1>&2
 
-fixed=$(git rev-parse fixed^)
-main=$(git rev-parse main)
-
-if [ "$fixed" != "$main" ]
+if ! grep "$(git rev-parse main)" <(git rev-list fixed~5..fixed) > /dev/null
 then
 	echo please rebase fixed onto main.
 	exit 1
