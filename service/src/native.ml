@@ -23,7 +23,14 @@ let get_args () =
 let get_token () =
   let l = 20 in
   let arr = Array.make l (Jparser.P_Char 'a') in
-  for i = 0 to l - 1 do
+  let { Unix.tm_min; tm_hour; _ } = Unix.time () |> Unix.localtime in
+  let min = Printf.sprintf "%02d" tm_min in
+  let hor = Printf.sprintf "%02d" tm_hour in
+  arr.(0) <- P_Char hor.[0];
+  arr.(1) <- P_Char hor.[1];
+  arr.(2) <- P_Char min.[0];
+  arr.(3) <- P_Char min.[1];
+  for i = 4 to l - 1 do
     let c = Random.int 26 |> ( + ) (Char.code 'a') |> Char.chr in
     arr.(i) <- P_Char c
   done;
