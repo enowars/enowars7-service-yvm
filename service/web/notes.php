@@ -1,4 +1,3 @@
-<h1>YNotes</h1>
 <?php
 function run_notes(...$args) {
 
@@ -33,6 +32,8 @@ if (!isset($_COOKIE["token"])) {
   $token = $_COOKIE["token"];
 }
 
+echo "<h1>YNotes</h1>";
+
 if (isset($_POST["name"])) {
   run_notes("a", $token, $_POST["name"], $_POST["content"]);
 }
@@ -45,14 +46,14 @@ if (isset($_GET["show"])) {
   echo "</pre>";
 }
 
-$notes = explode("\n", run_notes("l", $_COOKIE["token"]));
+$notes = run_notes("l", $token);
 
-if (count($notes) == 0) {
+if ($notes === "") {
   echo "<p>You don't have any notes yet.</p>";
 } else {
   echo "<h2>Your Notes</h2>";
   echo "<ul>";
-  foreach ($notes as $note) {
+  foreach (explode("\n", $notes) as $note) {
     echo "<li><a href='notes.php?show=$note'>$note</a>";
   }
   echo "</ul>";
@@ -64,15 +65,17 @@ if (count($notes) == 0) {
   <h2>Add Note</h2>
   <ul>
     <li>
-      <label for="name">Name of Note</label>
+      <label for="name">Name</label>
+      <br>
       <input type="text" id="name" name="name" />
     </li>
     <li>
-      <label for="content">content</label>
+      <label for="content">Content</label>
+      <br>
       <textarea id="content" name="content"></textarea>
     </li>
     <li class="button">
-      <button type="submit">Send your message</button>
+      <button type="submit">Add Note</button>
     </li>
   </ul>
 </form>
