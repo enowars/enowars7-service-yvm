@@ -15,6 +15,7 @@ let npe_msg =
   "Exceptions are not implemented, but: https://youtu.be/bLHL75H_VEM"
 
 let get_i16 code pc = String.get_int16_be code (pc + 1)
+let pad_4 i = i + ((4 - (i mod 4)) mod 4)
 
 let rec check_inv_helper = function
   | ')' :: ret, [] -> Some ret
@@ -295,14 +296,7 @@ let step state =
   | '\xa4' (*if_icmple*) -> branch (cmp_two_on_stack ( <= ))
   | '\xa7' (*goto*) -> branch (fun s -> (true, s))
   | '\xaa' (*tableswitch*) ->
-      let padded_pc =
-        match pc mod 4 with
-        | 0 -> pc
-        | 1 -> pc + 3
-        | 2 -> pc + 2
-        | 3 -> pc + 1
-        | _ -> failwith "foo"
-      in
+      let default_byte_idx = pad_4 (pc + 1) in
       let idx, stack =
         match stack with
         | Jparser.P_Int i :: stack -> (i |> Int32.to_int, stack)
@@ -310,23 +304,21 @@ let step state =
         | s :: _ -> s |> show_pType |> failwith
         | _ -> failwith "foo"
       in
-      let low = String.get_int32_be code (padded_pc + 4) |> Int32.to_int in
-      let high = String.get_int32_be code (padded_pc + 8) |> Int32.to_int in
+      let low =
+        String.get_int32_be code (default_byte_idx + 4) |> Int32.to_int
+      in
+      let high =
+        String.get_int32_be code (default_byte_idx + 8) |> Int32.to_int
+      in
       let in_range = low <= idx && idx <= high in
       let ji =
-        if in_range then padded_pc + 12 + ((idx - low) * 4) else padded_pc
+        if in_range then default_byte_idx + 12 + ((idx - low) * 4)
+        else default_byte_idx
       in
       let jump = String.get_int32_be code ji |> Int32.to_int in
       foo (pc + jump) stack
   | '\xab' (*lookupswitch*) ->
-      let padded_pc =
-        match pc mod 4 with
-        | 0 -> pc
-        | 1 -> pc + 3
-        | 2 -> pc + 2
-        | 3 -> pc + 1
-        | _ -> failwith "foo"
-      in
+      let default_byte_idx = pad_4 (pc + 1) in
       let key, stack =
         match stack with
         | Jparser.P_Int i :: stack -> (i, stack)
@@ -334,10 +326,12 @@ let step state =
         | s :: _ -> s |> show_pType |> failwith
         | _ -> failwith "foo"
       in
-      let default = String.get_int32_be code padded_pc |> Int32.to_int in
-      let n_pairs = String.get_int32_be code (padded_pc + 4) |> Int32.to_int in
+      let default = String.get_int32_be code default_byte_idx |> Int32.to_int in
+      let n_pairs =
+        String.get_int32_be code (default_byte_idx + 4) |> Int32.to_int
+      in
       let read_pair offset =
-        let offset = padded_pc + 8 (*defl, nprs*) + (offset * 8) in
+        let offset = default_byte_idx + 8 (*defl, nprs*) + (offset * 8) in
         (String.get_int32_be code offset, String.get_int32_be code (offset + 4))
       in
       let table = List.init n_pairs Fun.id |> List.map read_pair in
