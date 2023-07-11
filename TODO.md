@@ -7,3 +7,4 @@
 - more instructions
 - helpful error messages
 - int refactor
+- flag deletion
