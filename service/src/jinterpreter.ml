@@ -161,6 +161,7 @@ let step state =
     foo (if take_branch then pc + get_i16 code pc else pc + 3) stack
   in
   match opcode with
+  | '\x00' (*nop*) -> foo (pc + 1) stack
   | '\x01' (*aconst_null*) -> foo (pc + 1) (P_Reference None :: stack)
   | '\x02' (*iconst_m1*) -> foo (pc + 1) (P_Int (-1l) :: stack)
   | '\x03' (*iconst_0*) -> foo (pc + 1) (P_Int 0l :: stack)
