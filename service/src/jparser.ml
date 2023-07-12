@@ -353,8 +353,14 @@ let cook_field cp (raw_field : field_info) =
   let acc = raw_field.access_flags in
   match dscr with
   | "I" -> ((name, dscr), (acc, ref (P_Int 1337l)))
+  | "C" -> ((name, dscr), (acc, ref (P_Char '\xab')))
   | s when String.get s 0 = '[' -> ((name, dscr), (acc, ref (P_Reference None)))
-  | s -> "unsupported field type " ^ s |> failwith
+  | s ->
+      "unsupported field type " ^ s
+      ^ " (c.f. \
+         https://docs.oracle.com/javase/specs/jvms/se20/html/jvms-4.html#jvms-4.3.2)."
+      ^ " Yvm only handles int, char and (multi-dimensional) arrays of those."
+      |> failwith
 
 let cook_meth cp raw_meth =
   let name = rslv_name cp raw_meth.name_index in
