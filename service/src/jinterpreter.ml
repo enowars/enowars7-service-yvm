@@ -199,6 +199,21 @@ let step state =
   | '\x2b' (*aload_1*) -> foo (pc + 1) (locals.(1) :: stack)
   | '\x2c' (*aload_2*) -> foo (pc + 1) (locals.(2) :: stack)
   | '\x2d' (*aload_3*) -> foo (pc + 1) (locals.(3) :: stack)
+  | '\x2e' (*iaload*) ->
+      let ss =
+        match stack with
+        | P_Int idx :: P_Reference (Some arr) :: ss ->
+            let i =
+              match arr.(Int32.to_int idx) with
+              | P_Int i -> i
+              | _ -> failwith "expected char array"
+            in
+            Jparser.P_Int i :: ss
+        | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
+        | P_Char _ :: P_Reference None :: _ -> failwith npe_msg
+        | _ -> failwith "expected int and ref on stack"
+      in
+      foo (pc + 1) ss
   | '\x32' (*aaload*) ->
       let ss =
         match stack with
@@ -244,6 +259,20 @@ let step state =
   | '\x4c' (*astore_1*) -> foo (pc + 1) (astore_n 1 locals stack)
   | '\x4d' (*astore_2*) -> foo (pc + 1) (astore_n 2 locals stack)
   | '\x4e' (*astore_3*) -> foo (pc + 1) (astore_n 3 locals stack)
+  | '\x4f' (*iastore*) ->
+      let ss =
+        match stack with
+        | P_Int i :: P_Int idx :: P_Reference (Some arr) :: ss ->
+            arr.(Int32.to_int idx) <- P_Int i;
+            ss
+        | P_Char c :: P_Int idx :: P_Reference (Some arr) :: ss ->
+            arr.(Int32.to_int idx) <- P_Int (c |> Char.code |> Int32.of_int);
+            ss
+        | P_Char _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
+        | P_Int _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
+        | _ -> failwith "expected char/int, int, reference on stack"
+      in
+      foo (pc + 1) ss
   | '\x53' (*aastore*) ->
       let ss =
         match stack with
