@@ -26,4 +26,9 @@ function run_yvm($class, $dir, ...$args) {
 
   return [$exit_code, $stdout, $stderr];
 }
+
+function die_with($code, $msg) {
+    http_response_code($code);
+    die($msg);
+}
 ?>
