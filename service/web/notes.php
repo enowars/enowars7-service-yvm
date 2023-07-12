@@ -1,27 +1,15 @@
 <?php
+
+require "util.php";
+
 function run_notes(...$args) {
-
-  $fd_spec = array(
-     1 => array("pipe", "w"),
-     2 => array("pipe", "w"),
-  );
-
-  array_unshift($args, "../yvm", "Notes.class");
-
-  $process = proc_open($args, $fd_spec, $pipes, getcwd() . "/notes");
-
-  if (!is_resource($process)) {
-    die ("could not open process");
+  [$exit_code, $stdout, $stderr] = run_yvm("../classes/Notes.class", "notes", ...$args);
+  if ($exit_code != 0) {
+    echo "<p>An Error occured: yvm exit code <code>$exit_code</code></p>\n";
+    echo "<pre><code>\n";
+    echo $stderr;
+    echo "</code></pre>\n";
   }
-
-  $stdout = stream_get_contents($pipes[1]);
-  $stderr = stream_get_contents($pipes[2]);
-
-  fclose($pipes[1]);
-  fclose($pipes[2]);
-
-  assert(proc_close($process) == 0);
-
   return trim($stdout);
 }
 
