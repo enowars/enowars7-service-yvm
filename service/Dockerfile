@@ -17,7 +17,6 @@ FROM php:fpm
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT [ "/entrypoint.sh" ]
-COPY web/runner.php .
-COPY web/notes.php .
+COPY web/*.php .
 COPY --from=build /build/result/bin/yvm .
 COPY --from=jbuild Notes.class .
