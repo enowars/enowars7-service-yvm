@@ -1,14 +1,8 @@
 type primType =
-  | P_Boolean of int
-  | P_Byte of int
-  | P_Short of int
   | P_Int of int32
-  | P_Long of int64
   | P_Char of char
-  | P_Float of float
-  | P_Double of float
   | P_Reference of primType array option
-  | P_ReturnAddress
+  | P_Dummy
 [@@deriving show]
 
 type constant =

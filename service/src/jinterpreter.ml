@@ -143,7 +143,7 @@ let step state =
     { state with sstack = { frame with pc; fstack } :: frames }
   in
   let push_clinit_frame (c_cls, (clinit : Jparser.lmeth)) =
-    let locals = Array.make clinit.max_locals Jparser.P_ReturnAddress in
+    let locals = Array.make clinit.max_locals Jparser.P_Dummy in
     let clinit_frame =
       { code = clinit.code; pc = 0; fstack = []; klass = c_cls; locals }
     in
@@ -422,7 +422,7 @@ let step state =
             | Some x -> x
             | None -> failwith "class should have been loaded"
           in
-          let locals = Array.make f.max_locals Jparser.P_ReturnAddress in
+          let locals = Array.make f.max_locals Jparser.P_Dummy in
           List.iteri (Array.set locals) args;
           let new_frame =
             { code = f.code; pc = 0; fstack = []; klass; locals }
@@ -477,7 +477,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
     | Some (Jparser.LocalMeth main) -> main
     | _ -> failwith ("Method " ^ name ^ jtype ^ " not found")
   in
-  let locals = Array.make main.max_locals Jparser.P_ReturnAddress in
+  let locals = Array.make main.max_locals Jparser.P_Dummy in
   let main_frame =
     { code = main.code; pc = 0; fstack = []; klass = c_cls; locals }
   in
@@ -485,7 +485,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let sstack =
     match List.assoc_opt ("<clinit>", "()V") c_cls.meths with
     | Some (Jparser.LocalMeth clinit) ->
-        let locals = Array.make clinit.max_locals Jparser.P_ReturnAddress in
+        let locals = Array.make clinit.max_locals Jparser.P_Dummy in
         let clinit_frame =
           { code = clinit.code; pc = 0; fstack = []; klass = c_cls; locals }
         in
