@@ -116,6 +116,12 @@ let null_on_stack = function
 let cmp_two_on_stack cmp = function
   | Jparser.P_Int v2 :: Jparser.P_Int v1 :: stack ->
       (cmp (Int32.to_int v1) (Int32.to_int v2), stack)
+  | Jparser.P_Char v2 :: Jparser.P_Int v1 :: stack ->
+      (cmp (Int32.to_int v1) (Char.code v2), stack)
+  | Jparser.P_Int v2 :: Jparser.P_Char v1 :: stack ->
+      (cmp (Char.code v1) (Int32.to_int v2), stack)
+  | Jparser.P_Char v2 :: Jparser.P_Char v1 :: stack ->
+      (cmp (Char.code v1) (Char.code v2), stack)
   | a :: b :: _ ->
       a |> show_pType |> print_endline;
       b |> show_pType |> print_endline;
@@ -124,6 +130,7 @@ let cmp_two_on_stack cmp = function
 
 let cmp_stack_with_zero cmp = function
   | Jparser.P_Int v :: stack -> (cmp (Int32.to_int v) 0, stack)
+  | Jparser.P_Char v :: stack -> (cmp (Char.code v) 0, stack)
   | a :: b :: _ ->
       a |> show_pType |> print_endline;
       b |> show_pType |> print_endline;
@@ -202,7 +209,8 @@ let step state =
             in
             Jparser.P_Reference a :: ss
         | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "foo"
+        | P_Char _ :: P_Reference None :: _ -> failwith npe_msg
+        | _ -> failwith "expected int and ref on stack"
       in
       foo (pc + 1) ss
   | '\x34' (*caload*) ->
@@ -212,11 +220,13 @@ let step state =
             let c =
               match arr.(Int32.to_int idx) with
               | P_Char c -> c
+              | P_Int i -> i |> Int32.to_int |> Char.chr
               | _ -> failwith "expected char array"
             in
             Jparser.P_Char c :: ss
         | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "foo"
+        | P_Char _ :: P_Reference None :: _ -> failwith npe_msg
+        | _ -> failwith "expected int and ref on stack"
       in
       foo (pc + 1) ss
   | '\x36' (*istore*) ->
@@ -266,6 +276,24 @@ let step state =
         match stack with
         | P_Int a :: P_Int b :: ss ->
             let r = Jparser.P_Int (Int32.add a b) in
+            r :: ss
+        | P_Char a :: P_Int b :: ss ->
+            let r =
+              Jparser.P_Int (Int32.add (a |> Char.code |> Int32.of_int) b)
+            in
+            r :: ss
+        | P_Int a :: P_Char b :: ss ->
+            let r =
+              Jparser.P_Int (Int32.add (b |> Char.code |> Int32.of_int) a)
+            in
+            r :: ss
+        | P_Char a :: P_Char b :: ss ->
+            let r =
+              Jparser.P_Int
+                (Int32.add
+                   (a |> Char.code |> Int32.of_int)
+                   (b |> Char.code |> Int32.of_int))
+            in
             r :: ss
         | _ -> failwith "expected two ints on stack"
       in
@@ -434,11 +462,12 @@ let step state =
       | Error semiloaded_cls -> push_clinit_frame semiloaded_cls)
   | '\xbc' (*newarray*) ->
       let atype = code.[pc + 1] |> Char.code in
-      assert (atype = 5);
+      assert (atype == 5 || atype == 10);
       (*only char array supported*)
       let count, stack =
         match stack with
         | P_Int count :: stack -> (Int32.to_int count, stack)
+        | P_Char count :: stack -> (Char.code count, stack)
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
@@ -448,6 +477,7 @@ let step state =
       let count, stack =
         match stack with
         | P_Int count :: stack -> (Int32.to_int count, stack)
+        | P_Char count :: stack -> (Char.code count, stack)
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
