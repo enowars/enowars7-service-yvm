@@ -298,9 +298,52 @@ let step state =
       in
       foo (pc + 1) ss
   | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
+  | '\x58' (*pop2*) -> foo (pc + 1) (List.tl (List.tl stack))
   | '\x59' (*dup*) ->
       let h = List.hd stack in
       foo (pc + 1) (h :: stack)
+  | '\x5a' (*dup_x1*) ->
+      let stack =
+        match stack with
+        | a :: b :: ss -> a :: b :: a :: ss
+        | _ -> failwith "expected at least two elements on stack"
+      in
+      foo (pc + 1) stack
+  | '\x5b' (*dup_x2*) ->
+      let stack =
+        match stack with
+        | a :: b :: c :: ss -> a :: b :: c :: a :: ss
+        | _ -> failwith "expected at least three elements on stack"
+      in
+      foo (pc + 1) stack
+  | '\x5c' (*dup2*) ->
+      let stack =
+        match stack with
+        | a :: b :: ss -> a :: b :: a :: b :: ss
+        | _ -> failwith "expected at least two elements on stack"
+      in
+      foo (pc + 1) stack
+  | '\x5d' (*dup2_x1*) ->
+      let stack =
+        match stack with
+        | a :: b :: c :: ss -> a :: b :: c :: a :: b :: ss
+        | _ -> failwith "expected at least three elements on stack"
+      in
+      foo (pc + 1) stack
+  | '\x5e' (*dup2_x2*) ->
+      let stack =
+        match stack with
+        | a :: b :: c :: d :: ss -> a :: b :: c :: d :: a :: b :: ss
+        | _ -> failwith "expected at least four elements on stack"
+      in
+      foo (pc + 1) stack
+  | '\x5f' (*swap*) ->
+      let stack =
+        match stack with
+        | a :: b :: ss -> b :: a :: ss
+        | _ -> failwith "expected at least two elements on stack"
+      in
+      foo (pc + 1) stack
   | '\x60' (*iadd*) ->
       let stack =
         match stack with
