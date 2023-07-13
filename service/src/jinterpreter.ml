@@ -381,7 +381,7 @@ let step state =
   | '\x60' (*iadd*) -> foo (pc + 1) (imath_op Int32.add stack)
   | '\x64' (*isub*) -> foo (pc + 1) (imath_op Int32.sub stack)
   | '\x68' (*imul*) -> foo (pc + 1) (imath_op Int32.mul stack)
-  | '\x6c' (*imul*) -> foo (pc + 1) (imath_op Int32.mul stack)
+  | '\x6c' (*idiv*) -> foo (pc + 1) (imath_op Int32.div stack)
   | '\x70' (*irem*) -> foo (pc + 1) (imath_op Int32.rem stack)
   | '\x74' (*ineg*) ->
       let i, stack =
