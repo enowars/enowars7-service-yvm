@@ -153,6 +153,15 @@ let cmp_two_on_stack cmp = function
       failwith "foo"
   | _ -> failwith "foo"
 
+let cmp_refs_on_stack cmp = function
+  | Jparser.P_Reference (Some a) :: Jparser.P_Reference (Some b) :: stack ->
+      (cmp a b, stack)
+  | Jparser.P_Reference (Some a) :: Jparser.P_Reference None :: stack ->
+      (cmp a [||], stack)
+  | Jparser.P_Reference None :: Jparser.P_Reference (Some b) :: stack ->
+      (cmp [||] b, stack)
+  | _ -> failwith "expected two refs on stack"
+
 let cmp_stack_with_zero cmp = function
   | Jparser.P_Int v :: stack -> (cmp (Int32.to_int v) 0, stack)
   | Jparser.P_Char v :: stack -> (cmp (Char.code v) 0, stack)
@@ -423,6 +432,8 @@ let step state =
   | '\xa2' (*if_icmpge*) -> branch (cmp_two_on_stack ( >= ))
   | '\xa3' (*if_icmpgt*) -> branch (cmp_two_on_stack ( > ))
   | '\xa4' (*if_icmple*) -> branch (cmp_two_on_stack ( <= ))
+  | '\xa5' (*if_acmpeq*) -> branch (cmp_refs_on_stack ( == ))
+  | '\xa6' (*if_acmpne*) -> branch (cmp_refs_on_stack ( != ))
   | '\xa7' (*goto*) -> branch (fun s -> (true, s))
   | '\xaa' (*tableswitch*) ->
       let default_byte_idx = pad_4 (pc + 1) in
