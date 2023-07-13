@@ -107,6 +107,31 @@ let istore_n n locals = function
   | s :: _ -> s |> show_pType |> failwith
   | _ -> failwith "expected int on stack"
 
+let ishift_op op stack =
+  let a, b, stack =
+    match stack with
+    | Jparser.P_Int v2 :: P_Int v1 :: ss -> (v1, Int32.to_int v2, ss)
+    | P_Char v2 :: P_Int v1 :: ss -> (v1, v2 |> Char.code, ss)
+    | P_Int v2 :: P_Char v1 :: ss ->
+        (v1 |> Char.code |> Int32.of_int, Int32.to_int v2, ss)
+    | P_Char v2 :: P_Char v1 :: ss ->
+        (v1 |> Char.code |> Int32.of_int, v2 |> Char.code, ss)
+    | _ -> failwith "expected two ints on stack"
+  in
+  Jparser.P_Int (op a (b land 0x1f)) :: stack
+
+let imath_op op stack =
+  let a, b, stack =
+    match stack with
+    | Jparser.P_Int v2 :: P_Int v1 :: ss -> (v1, v2, ss)
+    | P_Char v2 :: P_Int v1 :: ss -> (v1, v2 |> Char.code |> Int32.of_int, ss)
+    | P_Int v2 :: P_Char v1 :: ss -> (v1 |> Char.code |> Int32.of_int, v2, ss)
+    | P_Char v2 :: P_Char v1 :: ss ->
+        (v1 |> Char.code |> Int32.of_int, v2 |> Char.code |> Int32.of_int, ss)
+    | _ -> failwith "expected two ints on stack"
+  in
+  Jparser.P_Int (op a b) :: stack
+
 let null_on_stack = function
   | Jparser.P_Reference (Some _) :: stack -> (false, stack)
   | Jparser.P_Reference None :: stack -> (true, stack)
@@ -344,33 +369,25 @@ let step state =
         | _ -> failwith "expected at least two elements on stack"
       in
       foo (pc + 1) stack
-  | '\x60' (*iadd*) ->
-      let stack =
+  | '\x60' (*iadd*) -> foo (pc + 1) (imath_op Int32.add stack)
+  | '\x64' (*isub*) -> foo (pc + 1) (imath_op Int32.sub stack)
+  | '\x68' (*imul*) -> foo (pc + 1) (imath_op Int32.mul stack)
+  | '\x6c' (*imul*) -> foo (pc + 1) (imath_op Int32.mul stack)
+  | '\x70' (*irem*) -> foo (pc + 1) (imath_op Int32.rem stack)
+  | '\x74' (*ineg*) ->
+      let i, stack =
         match stack with
-        | P_Int a :: P_Int b :: ss ->
-            let r = Jparser.P_Int (Int32.add a b) in
-            r :: ss
-        | P_Char a :: P_Int b :: ss ->
-            let r =
-              Jparser.P_Int (Int32.add (a |> Char.code |> Int32.of_int) b)
-            in
-            r :: ss
-        | P_Int a :: P_Char b :: ss ->
-            let r =
-              Jparser.P_Int (Int32.add (b |> Char.code |> Int32.of_int) a)
-            in
-            r :: ss
-        | P_Char a :: P_Char b :: ss ->
-            let r =
-              Jparser.P_Int
-                (Int32.add
-                   (a |> Char.code |> Int32.of_int)
-                   (b |> Char.code |> Int32.of_int))
-            in
-            r :: ss
-        | _ -> failwith "expected two ints on stack"
+        | P_Int i :: ss -> (i, ss)
+        | P_Char c :: ss -> (c |> Char.code |> Int32.of_int, ss)
+        | _ -> failwith "expected int on stack"
       in
-      foo (pc + 1) stack
+      foo (pc + 1) (P_Int (Int32.neg i) :: stack)
+  | '\x78' (*ishl*) -> foo (pc + 1) (ishift_op Int32.shift_left stack)
+  | '\x7a' (*ishr*) -> foo (pc + 1) (ishift_op Int32.shift_right stack)
+  | '\x7c' (*iushr*) -> foo (pc + 1) (ishift_op Int32.shift_right_logical stack)
+  | '\x7e' (*iand*) -> foo (pc + 1) (imath_op Int32.logand stack)
+  | '\x80' (*ior*) -> foo (pc + 1) (imath_op Int32.logor stack)
+  | '\x82' (*ixor*) -> foo (pc + 1) (imath_op Int32.rem stack)
   | '\x84' (*iinc*) ->
       let idx = code.[pc + 1] |> Char.code in
       let cnst = code.[pc + 2] |> Char.code in
