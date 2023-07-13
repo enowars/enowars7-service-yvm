@@ -2,6 +2,7 @@ type primType =
   | P_Int of int32
   | P_Char of char
   | P_Reference of primType array option
+  | P_Returnaddress of int
   | P_Dummy
 [@@deriving show]
 

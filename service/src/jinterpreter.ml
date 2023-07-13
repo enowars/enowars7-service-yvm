@@ -435,6 +435,17 @@ let step state =
   | '\xa5' (*if_acmpeq*) -> branch (cmp_refs_on_stack ( == ))
   | '\xa6' (*if_acmpne*) -> branch (cmp_refs_on_stack ( != ))
   | '\xa7' (*goto*) -> branch (fun s -> (true, s))
+  | '\xa8' (*jsr*) ->
+      let ret_addr = Jparser.P_Returnaddress (get_i16 code pc) in
+      branch (fun s -> (true, ret_addr :: s))
+  | '\xa9' (*ret*) ->
+      let idx = code.[pc + 1] |> Char.code in
+      let ra =
+        match locals.(idx) with
+        | P_Returnaddress ra -> ra
+        | _ -> failwith "expected returnaddress on stack"
+      in
+      foo ra stack
   | '\xaa' (*tableswitch*) ->
       let default_byte_idx = pad_4 (pc + 1) in
       let idx, stack =
