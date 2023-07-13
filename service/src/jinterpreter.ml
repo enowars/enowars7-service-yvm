@@ -594,6 +594,9 @@ let step state =
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
+      if count > 1000 then
+        failwith "Allocation of array with size >1000 forbidden"
+      else ();
       let r = Array.make count (Jparser.P_Char (Char.chr 0)) in
       foo (pc + 2) (Jparser.P_Reference (Some r) :: stack)
   | '\xbd' (*anewarray*) ->
@@ -604,6 +607,9 @@ let step state =
         | a :: _ -> show_pType a |> failwith
         | [] -> failwith "empty stack"
       in
+      if count > 1000 then
+        failwith "Allocation of array with size >1000 forbidden"
+      else ();
       let r = Array.make count (Jparser.P_Reference None) in
       foo (pc + 3) (Jparser.P_Reference (Some r) :: stack)
   | '\xbe' (*arraylength*) ->
@@ -649,7 +655,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let i = ref 0 in
   while !state.sstack != [] do
     let _ =
-      if !i > 10000 then failwith "more than 10k instructions: aborting"
+      if !i > 10_000 then failwith "more than 10k instructions: aborting"
       else incr i
     in
     state := step !state
