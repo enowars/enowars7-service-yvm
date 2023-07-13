@@ -353,8 +353,8 @@ let cook_field cp (raw_field : field_info) =
   let dscr = rslv_name cp raw_field.descriptor_index in
   let acc = raw_field.access_flags in
   match dscr with
-  | "I" -> ((name, dscr), (acc, ref (P_Int 1337l)))
-  | "C" -> ((name, dscr), (acc, ref (P_Char '\xab')))
+  | "I" -> ((name, dscr), (acc, ref (P_Int 0l)))
+  | "C" -> ((name, dscr), (acc, ref (P_Char '\x00')))
   | s when String.get s 0 = '[' -> ((name, dscr), (acc, ref (P_Reference None)))
   | s ->
       "unsupported field type " ^ s
