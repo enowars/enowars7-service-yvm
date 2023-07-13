@@ -2,13 +2,19 @@ type pool_entry = Method of Jparser.meth | Int of int
 type klass = Jparser.ckd_class
 type t = (string * klass) list ref
 
+let not_found what nat klass =
+  let name, typ = nat in
+  "could not find " ^ what ^ " " ^ name ^ " with type " ^ typ ^ " in class "
+  ^ klass
+  |> failwith
+
 let rec get_field (t : t) (caller : string) (klass : string)
     (nat : string * string) =
   match List.assoc_opt klass !t with
   | Some kpool -> (
       match List.assoc_opt nat kpool.fields with
       | Some (_, entry) -> Ok entry
-      | None -> failwith "invalid nat into loaded class")
+      | None -> not_found "field" nat klass)
   | None ->
       let ckd_cls =
         Jparser.parse_class (klass ^ ".class") |> Jparser.cook_class
@@ -28,7 +34,7 @@ let rec get_method (t : t) (caller : string) (klass : string)
   | Some kpool -> (
       match List.assoc_opt nat kpool.meths with
       | Some meth -> Ok meth
-      | None -> failwith "invalid nat into loaded class")
+      | None -> not_found "field" nat klass)
   | None ->
       let ckd_cls =
         Jparser.parse_class (klass ^ ".class") |> Jparser.cook_class
