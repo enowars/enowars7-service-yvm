@@ -508,7 +508,7 @@ let step state =
       let r =
         match stack with
         | Jparser.P_Reference r :: _ -> Jparser.P_Reference r
-        | _ -> failwith "ireturn: expected reference on stack"
+        | _ -> failwith "areturn: expected reference on stack"
       in
       let frames =
         match frames with
