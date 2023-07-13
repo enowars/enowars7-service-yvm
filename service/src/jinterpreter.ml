@@ -604,13 +604,13 @@ let step state =
         | [] -> failwith "empty stack"
       in
       foo (pc + 1) (P_Int (Int32.of_int length) :: stack)
+  | '\xc6' (*ifnull*) -> branch null_on_stack
   | '\xc7' (*ifnonnull*) ->
       let non_null_on_stack s =
         let is_true, s = null_on_stack s in
         (not is_true, s)
       in
       branch non_null_on_stack
-  | '\xc8' (*ifnull*) -> branch null_on_stack
   | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
 
 let run (c_cls : Jparser.ckd_class) (name, jtype) =
