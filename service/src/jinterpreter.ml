@@ -400,6 +400,17 @@ let step state =
       in
       locals.(idx) <- v;
       foo (pc + 3) stack
+  | '\x92' (*i2c*) ->
+      let stack =
+        match stack with
+        | P_Int i :: ss ->
+            Jparser.P_Char
+              (i |> Int32.to_int |> (fun i -> i mod 256) |> Char.chr)
+            :: ss
+        | P_Char c :: ss -> P_Char c :: ss
+        | _ -> failwith "expected int on stack"
+      in
+      foo (pc + 1) stack
   | '\x99' (*ifeq*) -> branch (cmp_stack_with_zero ( = ))
   | '\x9a' (*ifne*) -> branch (cmp_stack_with_zero ( != ))
   | '\x9b' (*iflt*) -> branch (cmp_stack_with_zero ( < ))
