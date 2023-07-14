@@ -263,8 +263,11 @@ async def putflag_test_1(
     db: ChainDB,
 ) -> None:
     r = await client.post("/notes.php", data={"name": "flag", "content": task.flag})
-    token = r.cookies["token"]
-    await db.set("token", token)
+    try:
+        token = r.cookies["token"]
+        await db.set("token", token)
+    except KeyError:
+        raise MumbleException("'token' cookie was not set")
 
 
 @checker.getflag(1)
