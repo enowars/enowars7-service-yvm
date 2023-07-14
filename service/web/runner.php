@@ -68,7 +68,7 @@ if (!move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
 }
 
 $id = bin2hex(random_bytes(16));
-if(!file_put_contents(REPLAY_FILE, "$id $filename\n", FILE_APPEND | LOCK_EX)) {
+if(!file_put_contents(REPLAY_FILE, "$id $filename " . time() . "\n", FILE_APPEND | LOCK_EX)) {
   error_log("error writing replay file!");
   die_with(500,"error writing replay file!");
 }
