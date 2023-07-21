@@ -6,6 +6,7 @@ import string
 import subprocess
 from itertools import zip_longest
 from logging import LoggerAdapter
+from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 from enochecker3 import (
@@ -14,6 +15,7 @@ from enochecker3 import (
     ExploitCheckerTaskMessage,
     GetflagCheckerTaskMessage,
     GetnoiseCheckerTaskMessage,
+    HavocCheckerTaskMessage,
     MumbleException,
     PutflagCheckerTaskMessage,
     PutnoiseCheckerTaskMessage,
@@ -283,6 +285,28 @@ async def exploit_test_1(
     return None
 
 
+@checker.havoc(0)
+async def havoc_random_precomputed(
+    task: HavocCheckerTaskMessage,
+    logger: LoggerAdapter,
+    client: AsyncClient,
+):
+    i = task.current_round_id % len(havocs)
+    if i == 1:
+        # to check all havocs with enochecker_test
+        for klass, out in havocs:
+            files = {"fileToUpload": (f"H_{gen_name()[:8]}.class", klass)}
+            r = await client.post("/runner.php", files=files)
+            assert out in r.text
+
+    klass, out = havocs[i]
+    files = {"fileToUpload": (f"H_{gen_name()[:8]}.class", klass)}
+    r = await client.post("/runner.php", files=files)
+    if not out in r.text:
+        logger.error(f"havoc: expected {out} in {r.text}")
+        raise MumbleException(f"Havoc {i}")
+
+
 l = 20
 TMPL_NAME = "A" * NAME_LENGTH
 TMPL_LENGTH = 0xFEFEFEFE
@@ -335,3 +359,15 @@ subprocess.run(["javac", "FooFoo.java"], check=True)
 
 with open(f"{TMPL_ACCS}.class", "rb") as f:  # type: ignore
     accessing_class: bytes = f.read()  # type: ignore
+
+havocs = []
+
+for d in Path("gen").iterdir():
+    out_file = d / "out.txt"
+    klass_file = [f for f in d.glob("*class")][0]
+    with open(out_file) as f:
+        out = f.read().strip()
+    with open(klass_file, "rb") as f:
+        klass = f.read()
+
+    havocs.append((klass, out))
