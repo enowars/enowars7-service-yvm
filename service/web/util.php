@@ -28,6 +28,7 @@ function run_yvm($class, $dir, ...$args) {
 }
 
 function die_with($code, $msg) {
+    error_log("dying - $code - $msg");
     http_response_code($code);
     die($msg);
 }
