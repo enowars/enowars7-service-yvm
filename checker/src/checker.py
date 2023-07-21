@@ -105,13 +105,8 @@ async def putflag_test(
     l, ints = flag_to_ints(task.flag)
     class_body = ints_to_class(class_name, ints, l, "private")
 
-    with open(f"{class_name}.class", "wb") as f:
-        f.write(class_body)
-
-    files = {"fileToUpload": open(f"{class_name}.class", "rb")}
+    files = {"fileToUpload": (f"{class_name}.class", class_body)}
     r = await client.post("/runner.php", files=files)
-
-    os.remove(f"{class_name}.class")
 
     assert_equals(r.status_code, 200, "storing class with flag failed")
 
@@ -187,13 +182,8 @@ async def exploit_test(
     data = data.replace(TMPL_ACCS.encode(), explt_name.encode())
     data = data.replace(TMPL_VCTM.encode(), victm_name.encode())
 
-    with open(f"{explt_name}.class", "wb") as f:
-        f.write(data)
-
-    files = {"fileToUpload": open(f"{explt_name}.class", "rb")}
+    files = {"fileToUpload": (f"{explt_name}.class", data)}
     r = await client.post("/runner.php", files=files)
-
-    os.remove(f"{explt_name}.class")
 
     return reconstruct_flag(r.text)
 
@@ -211,13 +201,8 @@ async def putnoise_access_public(
     l, ints = flag_to_ints(secret)
     class_body = ints_to_class(class_name, ints, l, "public")
 
-    with open(f"{class_name}.class", "wb") as f:
-        f.write(class_body)
-
-    files = {"fileToUpload": open(f"{class_name}.class", "rb")}
+    files = {"fileToUpload": (f"{class_name}.class", class_body)}
     r = await client.post("/runner.php", files=files)
-
-    os.remove(f"{class_name}.class")
 
     assert_equals(r.status_code, 200, "storing class with flag failed")
 
@@ -244,13 +229,8 @@ async def getnoise_access_public(
     data = data.replace(b"G" * 10, explt_name.encode())
     data = data.replace(b"V" * 10, victm_name.encode())
 
-    with open(f"{explt_name}.class", "wb") as f:
-        f.write(data)
-
-    files = {"fileToUpload": open(f"{explt_name}.class", "rb")}
+    files = {"fileToUpload": (f"{explt_name}.class", data)}
     r = await client.post("/runner.php", files=files)
-
-    os.remove(f"{explt_name}.class")
 
     assert_equals(reconstruct_flag(r.text), secret, "noise not found")
 
