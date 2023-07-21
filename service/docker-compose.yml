@@ -15,3 +15,8 @@ services:
       - ./notes:/var/www/html/notes
     hostname: yvm
     container_name: yvm-service
+    deploy:
+      resources:
+        limits:
+          cpus: '2.00'
+          memory: 2G
