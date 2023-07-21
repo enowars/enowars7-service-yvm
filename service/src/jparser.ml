@@ -233,7 +233,9 @@ let parse_field_info ic =
   }
 
 let read_class ic =
-  assert (input_u4 ic = 0xcafebabe);
+  if input_u4 ic != 0xcafebabe then
+    Exc.fail_usage "Magic bytes missing. Is this a .class file?"
+  else ();
   let minor = input_u2 ic in
   let major = input_u2 ic in
   let constant_pool_count = input_u2 ic in
@@ -383,7 +385,9 @@ let cook_meth cp raw_meth =
           {
             max_stack;
             max_locals;
-            code = String.sub code_str 8 code_len;
+            code =
+              (try String.sub code_str 8 code_len
+               with Invalid_argument _ -> Exc.fail_usage "broken classfile");
             exc_table = [||];
           } ) )
 
