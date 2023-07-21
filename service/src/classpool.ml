@@ -22,8 +22,8 @@ let rec get_field (t : t) (caller : string) (klass : string)
       t := (klass, ckd_cls) :: !t;
       let r =
         match List.assoc_opt ("<clinit>", "()V") ckd_cls.meths with
-        | Some (LocalMeth meth) -> Error (ckd_cls, meth)
-        | Some NativeMeth -> failwith "<clinit> shouldn't be native"
+        | Some (_, LocalMeth meth) -> Error (ckd_cls, meth)
+        | Some (_, NativeMeth) -> failwith "<clinit> shouldn't be native"
         | None -> get_field t caller klass nat
       in
       r
@@ -33,7 +33,9 @@ let rec get_method (t : t) (caller : string) (klass : string)
   match List.assoc_opt klass !t with
   | Some kpool -> (
       match List.assoc_opt nat kpool.meths with
-      | Some meth -> Ok meth
+      | Some (Some ACC_PRIVATE, meth) ->
+          if caller = klass then Ok meth else failwith "illegal access"
+      | Some (_, meth) -> Ok meth
       | None -> not_found "field" nat klass)
   | None ->
       let ckd_cls =
@@ -42,8 +44,8 @@ let rec get_method (t : t) (caller : string) (klass : string)
       t := (klass, ckd_cls) :: !t;
       let r =
         match List.assoc_opt ("<clinit>", "()V") ckd_cls.meths with
-        | Some (LocalMeth meth) -> Error (ckd_cls, meth)
-        | Some NativeMeth -> failwith "<clinit> shouldn't be native"
+        | Some (_, LocalMeth meth) -> Error (ckd_cls, meth)
+        | Some (_, NativeMeth) -> failwith "<clinit> shouldn't be native"
         | None -> get_method t caller klass nat
       in
       r

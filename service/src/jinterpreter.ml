@@ -633,7 +633,7 @@ let step state =
 let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
     match List.assoc_opt (name, jtype) c_cls.meths with
-    | Some (Jparser.LocalMeth main) -> main
+    | Some (Some ACC_PUBLIC, Jparser.LocalMeth main) -> main
     | _ -> failwith ("Method " ^ name ^ jtype ^ " not found")
   in
   let locals = Array.make main.max_locals Jparser.P_Dummy in
@@ -643,7 +643,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let pool = ref [ (c_cls.name, c_cls) ] in
   let sstack =
     match List.assoc_opt ("<clinit>", "()V") c_cls.meths with
-    | Some (Jparser.LocalMeth clinit) ->
+    | Some (_, Jparser.LocalMeth clinit) ->
         let locals = Array.make clinit.max_locals Jparser.P_Dummy in
         let clinit_frame =
           { code = clinit.code; pc = 0; fstack = []; klass = c_cls; locals }

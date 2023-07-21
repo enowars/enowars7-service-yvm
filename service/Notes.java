@@ -5,21 +5,12 @@ class Notes {
 	private static char[] errorWrite = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'w', 'r', 'i', 't', 'e'};
 	private static char[] errorRead  = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'r', 'e', 'a', 'd'};
 
-	private native static char[][] getArgs();
-
-	private native static char[] getToken();
-
-	private native static boolean mkdir(char[] dir);
-
-	private native static char[][] ls(char[] dir);
-
-	private native static void print(char[] arg);
-
-	private native static void error(char[] arg);
-
-	private native static boolean write(char[] file, char[] content);
-
-	private native static char[] read(char[] file);
+	native static char[][] getArgs();
+	native static char[] getToken();
+	native static char[][] ls(char[] dir);
+	native static void print(char[] arg);
+	native static void error(char[] arg);
+	native static char[] read(char[] file);
 
 	private static void register() {
 		char[] t = getToken();
@@ -52,6 +43,9 @@ class Notes {
 		}
 		return path;
 	}
+
+	private static native boolean mkdir(char[] dir);
+	private static native boolean write(char[] file, char[] content);
 
 	private static void addNote(char[] token, char[] name, char[] content) {
 		char[] path = toPath(token, name);
