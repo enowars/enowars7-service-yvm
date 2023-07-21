@@ -17,4 +17,6 @@
 (env
  (dev
   (flags
-   (:standard -warn-error -A))))
+   (:standard -warn-error -A)))
+ (fuzz
+  (ocamlopt_flags -afl-instrument)))
