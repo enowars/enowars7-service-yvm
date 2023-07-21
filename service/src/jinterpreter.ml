@@ -62,7 +62,8 @@ let print_pType pt =
     | Jparser.P_Char c -> c |> Printf.printf "%c"
     | Jparser.P_Reference (Some arr) -> arr |> Array.iter print_pType_h
     | Jparser.P_Reference None -> print_string "nil"
-    | _ -> failwith "cannot print this"
+    | Jparser.P_Dummy -> failwith "print dummy"
+    | Jparser.P_Returnaddress _ -> failwith "print retad"
   in
   print_pType_h pt;
   print_newline ()
