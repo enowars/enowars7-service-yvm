@@ -486,6 +486,8 @@ let step state =
       let n_pairs =
         String.get_int32_be code (default_byte_idx + 4) |> Int32.to_int
       in
+      if n_pairs > String.length code then Exc.fail_usage "broken class file"
+      else ();
       let read_pair offset =
         let offset = default_byte_idx + 8 (*defl, nprs*) + (offset * 8) in
         (String.get_int32_be code offset, String.get_int32_be code (offset + 4))
