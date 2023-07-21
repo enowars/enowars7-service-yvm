@@ -80,7 +80,7 @@ let run_native state klass name args =
   | _, "dump", [] ->
       state.pool |> Classpool.show |> print_endline;
       state
-  | "Notes", "getArgs", [] -> push (Native.get_args ())
+  | _, "getArgs", [] -> push (Native.get_args ())
   | "Notes", "getToken", [] -> push (Native.get_token ())
   | "Notes", "mkdir", dir :: [] -> push (Native.mkdir dir)
   | "Notes", "ls", dir :: [] -> push (Native.ls dir)
