@@ -41,7 +41,9 @@ let mkdir dir =
   try
     Sys.mkdir dir 0o755;
     Jparser.P_Int 1l
-  with Sys_error _ -> Jparser.P_Int 0l
+  with e ->
+    e |> Printexc.to_string |> prerr_endline;
+    Jparser.P_Int 0l
 
 let ls dir =
   let dir = to_str dir in
@@ -57,11 +59,15 @@ let write file content =
   try
     Out_channel.with_open_gen flags 0o400 file put_content;
     Jparser.P_Int 1l
-  with Sys_error _ -> Jparser.P_Int 0l
+  with e ->
+    e |> Printexc.to_string |> prerr_endline;
+    Jparser.P_Int 0l
 
 let read file =
   let file = to_str file in
   try
     let t = In_channel.with_open_text file In_channel.input_all in
     str_to_prt t
-  with Sys_error _ -> P_Reference None
+  with e ->
+    e |> Printexc.to_string |> prerr_endline;
+    P_Reference None
