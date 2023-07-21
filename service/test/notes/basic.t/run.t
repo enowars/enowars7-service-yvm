@@ -16,5 +16,5 @@
   foo
 
 We grep for error to suppress the non-deterministic error msg
-  $ yvm Notes.class g $(cat token) note_none 2>&1 | grep "^error$"
-  error
+  $ yvm Notes.class g $(cat token) note_none 2>&1 | grep "^error"
+  error: read
