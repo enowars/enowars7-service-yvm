@@ -8,8 +8,6 @@ let to_str = function
       arr |> Array.map ptchar_to_char |> Array.to_seq |> String.of_seq
   | _ -> failwith "foo"
 
-let to_carr str = str |> String.to_seq |> Array.of_seq
-
 let str_to_prt str =
   Jparser.P_Reference
     (Some
