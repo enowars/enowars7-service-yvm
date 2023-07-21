@@ -325,7 +325,12 @@ let read_class ic =
     attributes;
   }
 
-let parse_class path = In_channel.with_open_bin path read_class
+let parse_class path =
+  try In_channel.with_open_bin path read_class
+  with e ->
+    Printexc.to_string e |> prerr_endline;
+    Printexc.get_backtrace () |> prerr_endline;
+    Exc.fail_usage "class file seems broken. U sure?"
 
 let rslv_name cp idx =
   match cp.(idx) with C_Utf8 str -> str | _ -> failwith "expected string"
@@ -392,10 +397,19 @@ let cook_meth cp raw_meth =
           } ) )
 
 let cook_class (raw_class : raw_class) =
-  let cp = raw_class.constant_pool in
-  let name = rslv_class cp raw_class.this_class in
-  let super = rslv_class cp raw_class.super_class in
-  let ckd_cp = Array.map (cook_cp_entry cp) cp in
-  let meths = raw_class.methods |> Array.map (cook_meth cp) |> Array.to_list in
-  let fields = raw_class.fields |> Array.map (cook_field cp) |> Array.to_list in
-  { name; super; constant_pool = cp; ckd_cp; meths; fields }
+  try
+    let cp = raw_class.constant_pool in
+    let name = rslv_class cp raw_class.this_class in
+    let super = rslv_class cp raw_class.super_class in
+    let ckd_cp = Array.map (cook_cp_entry cp) cp in
+    let meths =
+      raw_class.methods |> Array.map (cook_meth cp) |> Array.to_list
+    in
+    let fields =
+      raw_class.fields |> Array.map (cook_field cp) |> Array.to_list
+    in
+    { name; super; constant_pool = cp; ckd_cp; meths; fields }
+  with e ->
+    Printexc.to_string e |> prerr_endline;
+    Printexc.get_backtrace () |> prerr_endline;
+    Exc.fail_usage "class file seems broken. U sure?"
