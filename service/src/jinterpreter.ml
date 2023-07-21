@@ -40,7 +40,7 @@ let take_args args stack =
   let rec ta_helper args stack acc =
     match (args, stack) with
     | [], stack -> (stack, acc)
-    | _, [] -> failwith "foo"
+    | _, [] -> Exc.fail_usage "foo"
     | 'I' :: args, Jparser.P_Int i :: ss ->
         ta_helper args ss (Jparser.P_Int i :: acc)
     | 'I' :: args, Jparser.P_Char c :: ss ->
@@ -54,7 +54,7 @@ let take_args args stack =
     | c :: _, _ ->
         if c != 'I' && c != 'C' && c != '[' then
           Exc.fail_usage "unsupported param type"
-        else failwith "take_args: weird stack"
+        else Exc.fail_usage "take_args: weird stack"
   in
   let stack, racc = ta_helper args stack [] in
   (stack, racc)
@@ -65,8 +65,8 @@ let print_pType pt =
     | Jparser.P_Char c -> c |> Printf.printf "%c"
     | Jparser.P_Reference (Some arr) -> arr |> Array.iter print_pType_h
     | Jparser.P_Reference None -> print_string "nil"
-    | Jparser.P_Dummy -> failwith "print dummy"
-    | Jparser.P_Returnaddress _ -> failwith "print retad"
+    | Jparser.P_Dummy -> Exc.fail_usage "print dummy"
+    | Jparser.P_Returnaddress _ -> Exc.fail_usage "print retad"
   in
   print_pType_h pt;
   print_newline ()
@@ -101,7 +101,7 @@ let astore_n n locals = function
   | Jparser.P_Reference s :: ss ->
       locals.(n) <- Jparser.P_Reference s;
       ss
-  | _ -> failwith "expected reference on stack"
+  | _ -> Exc.fail_usage "expected reference on stack"
 
 let istore_n n locals = function
   | Jparser.P_Int i :: ss ->
@@ -110,8 +110,8 @@ let istore_n n locals = function
   | Jparser.P_Char c :: ss ->
       locals.(n) <- Jparser.P_Int (c |> Char.code |> Int32.of_int);
       ss
-  | s :: _ -> s |> show_pType |> failwith
-  | _ -> failwith "expected int on stack"
+  | s :: _ -> s |> show_pType |> Exc.fail_usage
+  | _ -> Exc.fail_usage "expected int on stack"
 
 let ishift_op op stack =
   let a, b, stack =
@@ -122,7 +122,7 @@ let ishift_op op stack =
         (v1 |> Char.code |> Int32.of_int, Int32.to_int v2, ss)
     | P_Char v2 :: P_Char v1 :: ss ->
         (v1 |> Char.code |> Int32.of_int, v2 |> Char.code, ss)
-    | _ -> failwith "expected two ints on stack"
+    | _ -> Exc.fail_usage "expected two ints on stack"
   in
   Jparser.P_Int (op a (b land 0x1f)) :: stack
 
@@ -134,15 +134,15 @@ let imath_op op stack =
     | P_Int v2 :: P_Char v1 :: ss -> (v1 |> Char.code |> Int32.of_int, v2, ss)
     | P_Char v2 :: P_Char v1 :: ss ->
         (v1 |> Char.code |> Int32.of_int, v2 |> Char.code |> Int32.of_int, ss)
-    | _ -> failwith "expected two ints on stack"
+    | _ -> Exc.fail_usage "expected two ints on stack"
   in
   Jparser.P_Int (op a b) :: stack
 
 let null_on_stack = function
   | Jparser.P_Reference (Some _) :: stack -> (false, stack)
   | Jparser.P_Reference None :: stack -> (true, stack)
-  | a :: _ -> show_pType a |> failwith
-  | [] -> failwith "empty stack"
+  | a :: _ -> show_pType a |> Exc.fail_usage
+  | [] -> Exc.fail_usage "empty stack"
 
 let cmp_two_on_stack cmp = function
   | Jparser.P_Int v2 :: Jparser.P_Int v1 :: stack ->
@@ -156,8 +156,8 @@ let cmp_two_on_stack cmp = function
   | a :: b :: _ ->
       a |> show_pType |> print_endline;
       b |> show_pType |> print_endline;
-      failwith "foo"
-  | _ -> failwith "foo"
+      Exc.fail_usage "foo"
+  | _ -> Exc.fail_usage "foo"
 
 let cmp_refs_on_stack cmp = function
   | Jparser.P_Reference (Some a) :: Jparser.P_Reference (Some b) :: stack ->
@@ -166,7 +166,7 @@ let cmp_refs_on_stack cmp = function
       (cmp a [||], stack)
   | Jparser.P_Reference None :: Jparser.P_Reference (Some b) :: stack ->
       (cmp [||] b, stack)
-  | _ -> failwith "expected two refs on stack"
+  | _ -> Exc.fail_usage "expected two refs on stack"
 
 let cmp_stack_with_zero cmp = function
   | Jparser.P_Int v :: stack -> (cmp (Int32.to_int v) 0, stack)
@@ -174,15 +174,15 @@ let cmp_stack_with_zero cmp = function
   | a :: b :: _ ->
       a |> show_pType |> print_endline;
       b |> show_pType |> print_endline;
-      failwith "foo"
-  | _ -> failwith "foo"
+      Exc.fail_usage "foo"
+  | _ -> Exc.fail_usage "foo"
 
 let step state =
   let { sstack; pool; _ } = state in
   let frame, frames =
     match sstack with
     | frame :: frames -> (frame, frames)
-    | [] -> failwith "empty stack?!"
+    | [] -> Exc.fail_usage "empty stack?!"
   in
   let { code; pc; fstack = stack; klass = c_cls; locals } = frame in
   let opcode = code.[pc] in
@@ -221,7 +221,7 @@ let step state =
         | C_Integer i ->
             let i = Jparser.P_Int i in
             (pc + 2, i :: stack)
-        | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> failwith
+        | x -> Jparser.show_constant x |> ( ^ ) "unexpeced " |> Exc.fail_usage
       in
       foo pc s
   | '\x15' (*iload*) ->
@@ -245,12 +245,12 @@ let step state =
             let i =
               match arr.(Int32.to_int idx) with
               | P_Int i -> i
-              | _ -> failwith "expected char array"
+              | _ -> Exc.fail_usage "expected char array"
             in
             Jparser.P_Int i :: ss
-        | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | P_Char _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "expected int and ref on stack"
+        | P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | P_Char _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | _ -> Exc.fail_usage "expected int and ref on stack"
       in
       foo (pc + 1) ss
   | '\x32' (*aaload*) ->
@@ -260,12 +260,12 @@ let step state =
             let a =
               match arr.(Int32.to_int idx) with
               | Jparser.P_Reference a -> a
-              | _ -> failwith "expected arr array"
+              | _ -> Exc.fail_usage "expected arr array"
             in
             Jparser.P_Reference a :: ss
-        | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | P_Char _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "expected int and ref on stack"
+        | P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | P_Char _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | _ -> Exc.fail_usage "expected int and ref on stack"
       in
       foo (pc + 1) ss
   | '\x34' (*caload*) ->
@@ -276,12 +276,12 @@ let step state =
               match arr.(Int32.to_int idx) with
               | P_Char c -> c
               | P_Int i -> i |> Int32.to_int |> Char.chr
-              | _ -> failwith "expected char array"
+              | _ -> Exc.fail_usage "expected char array"
             in
             Jparser.P_Char c :: ss
-        | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | P_Char _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "expected int and ref on stack"
+        | P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | P_Char _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | _ -> Exc.fail_usage "expected int and ref on stack"
       in
       foo (pc + 1) ss
   | '\x36' (*istore*) ->
@@ -307,9 +307,9 @@ let step state =
         | P_Char c :: P_Int idx :: P_Reference (Some arr) :: ss ->
             arr.(Int32.to_int idx) <- P_Int (c |> Char.code |> Int32.of_int);
             ss
-        | P_Char _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | P_Int _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "expected char/int, int, reference on stack"
+        | P_Char _ :: P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | P_Int _ :: P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | _ -> Exc.fail_usage "expected char/int, int, reference on stack"
       in
       foo (pc + 1) ss
   | '\x53' (*aastore*) ->
@@ -318,8 +318,9 @@ let step state =
         | P_Reference a :: P_Int idx :: P_Reference (Some arr) :: ss ->
             arr.(Int32.to_int idx) <- P_Reference a;
             ss
-        | P_Reference _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "expected reference on stack"
+        | P_Reference _ :: P_Int _ :: P_Reference None :: _ ->
+            Exc.fail_usage npe_msg
+        | _ -> Exc.fail_usage "expected reference on stack"
       in
       foo (pc + 1) ss
   | '\x55' (*castore*) ->
@@ -331,9 +332,9 @@ let step state =
         | P_Int c :: P_Int idx :: P_Reference (Some arr) :: ss ->
             arr.(Int32.to_int idx) <- P_Char (c |> Int32.to_int |> Char.chr);
             ss
-        | P_Char _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | P_Int _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
-        | _ -> failwith "expected char/int, int, reference on stack"
+        | P_Char _ :: P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | P_Int _ :: P_Int _ :: P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | _ -> Exc.fail_usage "expected char/int, int, reference on stack"
       in
       foo (pc + 1) ss
   | '\x57' (*pop*) -> foo (pc + 1) (List.tl stack)
@@ -345,42 +346,42 @@ let step state =
       let stack =
         match stack with
         | a :: b :: ss -> a :: b :: a :: ss
-        | _ -> failwith "expected at least two elements on stack"
+        | _ -> Exc.fail_usage "expected at least two elements on stack"
       in
       foo (pc + 1) stack
   | '\x5b' (*dup_x2*) ->
       let stack =
         match stack with
         | a :: b :: c :: ss -> a :: b :: c :: a :: ss
-        | _ -> failwith "expected at least three elements on stack"
+        | _ -> Exc.fail_usage "expected at least three elements on stack"
       in
       foo (pc + 1) stack
   | '\x5c' (*dup2*) ->
       let stack =
         match stack with
         | a :: b :: ss -> a :: b :: a :: b :: ss
-        | _ -> failwith "expected at least two elements on stack"
+        | _ -> Exc.fail_usage "expected at least two elements on stack"
       in
       foo (pc + 1) stack
   | '\x5d' (*dup2_x1*) ->
       let stack =
         match stack with
         | a :: b :: c :: ss -> a :: b :: c :: a :: b :: ss
-        | _ -> failwith "expected at least three elements on stack"
+        | _ -> Exc.fail_usage "expected at least three elements on stack"
       in
       foo (pc + 1) stack
   | '\x5e' (*dup2_x2*) ->
       let stack =
         match stack with
         | a :: b :: c :: d :: ss -> a :: b :: c :: d :: a :: b :: ss
-        | _ -> failwith "expected at least four elements on stack"
+        | _ -> Exc.fail_usage "expected at least four elements on stack"
       in
       foo (pc + 1) stack
   | '\x5f' (*swap*) ->
       let stack =
         match stack with
         | a :: b :: ss -> b :: a :: ss
-        | _ -> failwith "expected at least two elements on stack"
+        | _ -> Exc.fail_usage "expected at least two elements on stack"
       in
       foo (pc + 1) stack
   | '\x60' (*iadd*) -> foo (pc + 1) (imath_op Int32.add stack)
@@ -393,7 +394,7 @@ let step state =
         match stack with
         | P_Int i :: ss -> (i, ss)
         | P_Char c :: ss -> (c |> Char.code |> Int32.of_int, ss)
-        | _ -> failwith "expected int on stack"
+        | _ -> Exc.fail_usage "expected int on stack"
       in
       foo (pc + 1) (P_Int (Int32.neg i) :: stack)
   | '\x78' (*ishl*) -> foo (pc + 1) (ishift_op Int32.shift_left stack)
@@ -410,7 +411,7 @@ let step state =
         | Jparser.P_Int i ->
             Jparser.P_Int (Int32.to_int i + cnst |> Int32.of_int)
         | Jparser.P_Char c -> Jparser.P_Int (Char.code c + cnst |> Int32.of_int)
-        | s -> s |> show_pType |> failwith
+        | s -> s |> show_pType |> Exc.fail_usage
       in
       locals.(idx) <- v;
       foo (pc + 3) stack
@@ -422,7 +423,7 @@ let step state =
               (i |> Int32.to_int |> (fun i -> i mod 256) |> Char.chr)
             :: ss
         | P_Char c :: ss -> P_Char c :: ss
-        | _ -> failwith "expected int on stack"
+        | _ -> Exc.fail_usage "expected int on stack"
       in
       foo (pc + 1) stack
   | '\x99' (*ifeq*) -> branch (cmp_stack_with_zero ( = ))
@@ -448,7 +449,7 @@ let step state =
       let ra =
         match locals.(idx) with
         | P_Returnaddress ra -> ra
-        | _ -> failwith "expected returnaddress on stack"
+        | _ -> Exc.fail_usage "expected returnaddress on stack"
       in
       foo ra stack
   | '\xaa' (*tableswitch*) ->
@@ -457,8 +458,8 @@ let step state =
         match stack with
         | Jparser.P_Int i :: stack -> (i |> Int32.to_int, stack)
         | Jparser.P_Char c :: stack -> (c |> Char.code, stack)
-        | s :: _ -> s |> show_pType |> failwith
-        | _ -> failwith "foo"
+        | s :: _ -> s |> show_pType |> Exc.fail_usage
+        | _ -> Exc.fail_usage "foo"
       in
       let low =
         String.get_int32_be code (default_byte_idx + 4) |> Int32.to_int
@@ -479,8 +480,8 @@ let step state =
         match stack with
         | Jparser.P_Int i :: stack -> (i, stack)
         | Jparser.P_Char c :: stack -> (c |> Char.code |> Int32.of_int, stack)
-        | s :: _ -> s |> show_pType |> failwith
-        | _ -> failwith "foo"
+        | s :: _ -> s |> show_pType |> Exc.fail_usage
+        | _ -> Exc.fail_usage "foo"
       in
       let default = String.get_int32_be code default_byte_idx |> Int32.to_int in
       let n_pairs =
@@ -503,24 +504,24 @@ let step state =
       let i =
         match stack with
         | i :: _ -> i
-        | [] -> failwith "ireturn: expected int on stack"
+        | [] -> Exc.fail_usage "ireturn: expected int on stack"
       in
       let frames =
         match frames with
         | f :: fs -> { f with fstack = i :: f.fstack } :: fs
-        | [] -> failwith "foo"
+        | [] -> Exc.fail_usage "foo"
       in
       { state with sstack = frames }
   | '\xb0' (*areturn*) ->
       let r =
         match stack with
         | Jparser.P_Reference r :: _ -> Jparser.P_Reference r
-        | _ -> failwith "areturn: expected reference on stack"
+        | _ -> Exc.fail_usage "areturn: expected reference on stack"
       in
       let frames =
         match frames with
         | f :: fs -> { f with fstack = r :: f.fstack } :: fs
-        | [] -> failwith "foo"
+        | [] -> Exc.fail_usage "foo"
       in
       { state with sstack = frames }
   | '\xb1' (*return*) -> { state with sstack = frames }
@@ -529,7 +530,7 @@ let step state =
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
-        | _ -> failwith "expected field"
+        | _ -> Exc.fail_usage "expected field"
       in
       let s =
         match Classpool.get_field pool c_cls.name klass (name, jtype) with
@@ -542,7 +543,7 @@ let step state =
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Field { klass; name_and_type } -> (klass, name_and_type)
-        | _ -> failwith "expected field"
+        | _ -> Exc.fail_usage "expected field"
       in
       let s =
         match Classpool.get_field pool c_cls.name klass (name, jtype) with
@@ -553,8 +554,9 @@ let step state =
               | s, P_Reference r :: ss when String.get s 0 = '[' ->
                   (Jparser.P_Reference r, ss)
               | t, v :: _ ->
-                  "putstatic (" ^ t ^ ", " ^ show_pType v ^ ")" |> failwith
-              | _, [] -> "expected sth on stack" |> failwith
+                  "putstatic (" ^ t ^ ", " ^ show_pType v ^ ")"
+                  |> Exc.fail_usage
+              | _, [] -> "expected sth on stack" |> Exc.fail_usage
             in
             f := v;
             foo (pc + 3) stack
@@ -566,7 +568,7 @@ let step state =
       let klass, (name, jtype) =
         match c_cls.ckd_cp.(idx) with
         | CKD_Method { klass; name_and_type } -> (klass, name_and_type)
-        | _ -> failwith "expected method"
+        | _ -> Exc.fail_usage "expected method"
       in
       let args = get_args_str jtype in
       let fstack, args = take_args args stack in
@@ -578,7 +580,7 @@ let step state =
           let klass =
             match List.assoc_opt klass !pool with
             | Some x -> x
-            | None -> failwith "class should have been loaded"
+            | None -> Exc.fail_usage "class should have been loaded"
           in
           let locals = Array.make f.max_locals Jparser.P_Dummy in
           List.iteri (Array.set locals) args;
@@ -592,14 +594,15 @@ let step state =
       | Error semiloaded_cls -> push_clinit_frame semiloaded_cls)
   | '\xbc' (*newarray*) ->
       let atype = code.[pc + 1] |> Char.code in
-      assert (atype == 5 || atype == 10);
+      if atype == 5 || atype == 10 then ()
+      else Exc.fail_usage "unsupported array type";
       (*only char array supported*)
       let count, stack =
         match stack with
         | P_Int count :: stack -> (Int32.to_int count, stack)
         | P_Char count :: stack -> (Char.code count, stack)
-        | a :: _ -> show_pType a |> failwith
-        | [] -> failwith "empty stack"
+        | a :: _ -> show_pType a |> Exc.fail_usage
+        | [] -> Exc.fail_usage "empty stack"
       in
       if count > 1000 then
         Exc.fail_usage "Allocation of array with size >1000 forbidden"
@@ -611,8 +614,8 @@ let step state =
         match stack with
         | P_Int count :: stack -> (Int32.to_int count, stack)
         | P_Char count :: stack -> (Char.code count, stack)
-        | a :: _ -> show_pType a |> failwith
-        | [] -> failwith "empty stack"
+        | a :: _ -> show_pType a |> Exc.fail_usage
+        | [] -> Exc.fail_usage "empty stack"
       in
       if count > 1000 then
         Exc.fail_usage "Allocation of array with size >1000 forbidden"
@@ -623,9 +626,9 @@ let step state =
       let length, stack =
         match stack with
         | P_Reference (Some arr) :: stack -> (Array.length arr, stack)
-        | P_Reference None :: _ -> failwith npe_msg
-        | a :: _ -> show_pType a |> failwith
-        | [] -> failwith "empty stack"
+        | P_Reference None :: _ -> Exc.fail_usage npe_msg
+        | a :: _ -> show_pType a |> Exc.fail_usage
+        | [] -> Exc.fail_usage "empty stack"
       in
       foo (pc + 1) (P_Int (Int32.of_int length) :: stack)
   | '\xc6' (*ifnull*) -> branch null_on_stack
@@ -668,5 +671,9 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
       if !i > 10_000 then Exc.fail_usage "more than 10k instructions: aborting"
       else incr i
     in
-    state := step !state
+    try state := step !state
+    with e ->
+      Printexc.to_string e |> prerr_endline;
+      Printexc.get_backtrace () |> prerr_endline;
+      Exc.fail_usage "something failed"
   done
