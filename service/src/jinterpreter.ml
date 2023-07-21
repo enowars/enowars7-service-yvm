@@ -395,8 +395,8 @@ let step state =
   | '\x7a' (*ishr*) -> foo (pc + 1) (ishift_op Int32.shift_right stack)
   | '\x7c' (*iushr*) -> foo (pc + 1) (ishift_op Int32.shift_right_logical stack)
   | '\x7e' (*iand*) -> foo (pc + 1) (imath_op Int32.logand stack)
-  | '\x80' (*ior*) -> foo (pc + 1) (imath_op Int32.logor stack)
-  | '\x82' (*ixor*) -> foo (pc + 1) (imath_op Int32.rem stack)
+  | '\x80' (*ior *) -> foo (pc + 1) (imath_op Int32.logor stack)
+  | '\x82' (*ixor*) -> foo (pc + 1) (imath_op Int32.logxor stack)
   | '\x84' (*iinc*) ->
       let idx = code.[pc + 1] |> Char.code in
       let cnst = get_i8 code (pc + 1) in
