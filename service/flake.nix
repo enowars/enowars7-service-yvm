@@ -25,6 +25,7 @@
               nativeBuildInputs = [
                 ocamlPkgs.ppx_deriving
                 ocamlPkgs.ppxlib
+                ocamlPkgs.bisect_ppx
               ];
               src = ./.;
             };
