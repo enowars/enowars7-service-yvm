@@ -243,9 +243,11 @@ let step state =
         match stack with
         | P_Int idx :: P_Reference (Some arr) :: ss ->
             let i =
-              match arr.(Int32.to_int idx) with
-              | P_Int i -> i
-              | _ -> failwith "expected char array"
+              try
+                match arr.(Int32.to_int idx) with
+                | P_Int i -> i
+                | _ -> failwith "expected char array"
+              with Invalid_argument _ -> Exc.fail_usage "index out of bounds"
             in
             Jparser.P_Int i :: ss
         | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
@@ -258,9 +260,11 @@ let step state =
         match stack with
         | P_Int idx :: P_Reference (Some arr) :: ss ->
             let a =
-              match arr.(Int32.to_int idx) with
-              | Jparser.P_Reference a -> a
-              | _ -> failwith "expected arr array"
+              try
+                match arr.(Int32.to_int idx) with
+                | Jparser.P_Reference a -> a
+                | _ -> failwith "expected arr array"
+              with Invalid_argument _ -> Exc.fail_usage "index out of bounds"
             in
             Jparser.P_Reference a :: ss
         | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
@@ -273,10 +277,12 @@ let step state =
         match stack with
         | P_Int idx :: P_Reference (Some arr) :: ss ->
             let c =
-              match arr.(Int32.to_int idx) with
-              | P_Char c -> c
-              | P_Int i -> i |> Int32.to_int |> Char.chr
-              | _ -> failwith "expected char array"
+              try
+                match arr.(Int32.to_int idx) with
+                | P_Char c -> c
+                | P_Int i -> i |> Int32.to_int |> Char.chr
+                | _ -> failwith "expected char array"
+              with Invalid_argument _ -> Exc.fail_usage "index out of bounds"
             in
             Jparser.P_Char c :: ss
         | P_Int _ :: P_Reference None :: _ -> failwith npe_msg
@@ -302,10 +308,12 @@ let step state =
       let ss =
         match stack with
         | P_Int i :: P_Int idx :: P_Reference (Some arr) :: ss ->
-            arr.(Int32.to_int idx) <- P_Int i;
+            (try arr.(Int32.to_int idx) <- P_Int i
+             with Invalid_argument _ -> Exc.fail_usage "index out of bounds");
             ss
         | P_Char c :: P_Int idx :: P_Reference (Some arr) :: ss ->
-            arr.(Int32.to_int idx) <- P_Int (c |> Char.code |> Int32.of_int);
+            (try arr.(Int32.to_int idx) <- P_Int (c |> Char.code |> Int32.of_int)
+             with Invalid_argument _ -> Exc.fail_usage "index out of bounds");
             ss
         | P_Char _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | P_Int _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
@@ -316,7 +324,8 @@ let step state =
       let ss =
         match stack with
         | P_Reference a :: P_Int idx :: P_Reference (Some arr) :: ss ->
-            arr.(Int32.to_int idx) <- P_Reference a;
+            (try arr.(Int32.to_int idx) <- P_Reference a
+             with Invalid_argument _ -> Exc.fail_usage "index out of bounds");
             ss
         | P_Reference _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | _ -> failwith "expected reference on stack"
@@ -326,10 +335,12 @@ let step state =
       let ss =
         match stack with
         | P_Char c :: P_Int idx :: P_Reference (Some arr) :: ss ->
-            arr.(Int32.to_int idx) <- P_Char c;
+            (try arr.(Int32.to_int idx) <- P_Char c
+             with Invalid_argument _ -> Exc.fail_usage "index out of bounds");
             ss
         | P_Int c :: P_Int idx :: P_Reference (Some arr) :: ss ->
-            arr.(Int32.to_int idx) <- P_Char (c |> Int32.to_int |> Char.chr);
+            (try arr.(Int32.to_int idx) <- P_Char (c |> Int32.to_int |> Char.chr)
+             with Invalid_argument _ -> Exc.fail_usage "index out of bounds");
             ss
         | P_Char _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
         | P_Int _ :: P_Int _ :: P_Reference None :: _ -> failwith npe_msg
