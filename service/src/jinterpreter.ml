@@ -14,6 +14,7 @@ type state = { sstack : frame list; pool : Classpool.t; name : string }
 let npe_msg =
   "Exceptions are not implemented, but: https://youtu.be/bLHL75H_VEM"
 
+let get_i8 code pc = String.get_int8 code (pc + 1)
 let get_i16 code pc = String.get_int16_be code (pc + 1)
 let pad_4 i = i + ((4 - (i mod 4)) mod 4)
 
@@ -205,8 +206,7 @@ let step state =
   | '\x07' (*iconst_4*) -> foo (pc + 1) (P_Int 4l :: stack)
   | '\x08' (*iconst_5*) -> foo (pc + 1) (P_Int 5l :: stack)
   | '\x10' (*bipush*) ->
-      let byte = code.[pc + 1] |> Char.code |> Int32.of_int in
-      foo (pc + 2) (P_Int byte :: stack)
+      foo (pc + 2) (P_Int (get_i8 code pc |> Int32.of_int) :: stack)
   | '\x11' (*sipush*) ->
       foo (pc + 3) (P_Int (get_i16 code pc |> Int32.of_int) :: stack)
   | '\x12' (*ldc*) ->
@@ -399,7 +399,7 @@ let step state =
   | '\x82' (*ixor*) -> foo (pc + 1) (imath_op Int32.rem stack)
   | '\x84' (*iinc*) ->
       let idx = code.[pc + 1] |> Char.code in
-      let cnst = code.[pc + 2] |> Char.code in
+      let cnst = get_i8 code (pc + 1) in
       let v =
         match locals.(idx) with
         | Jparser.P_Int i ->
