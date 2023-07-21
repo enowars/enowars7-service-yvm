@@ -69,7 +69,7 @@ type field_info = {
 [@@deriving show]
 
 type method_info = {
-  access_flags : int;
+  access : access_flag option;
   is_native : bool;
   name_index : int;
   descriptor_index : int;
@@ -113,7 +113,7 @@ type ckd_class = {
   super : string;
   constant_pool : constant array;
   ckd_cp : ckd_constant array;
-  meths : ((string * string) * meth) list;
+  meths : ((string * string) * (access_flag option * meth)) list;
   fields : ((string * string) * (access_flag option * primType ref)) list;
 }
 [@@deriving show]
@@ -188,16 +188,17 @@ let parse_attribute_info ic =
   let length = input_u4 ic in
   { attribute_name_index; info = really_input_string ic length }
 
+let parse_access_flag access_flags_int =
+  match access_flags_int land 0b111 with
+  | 0 -> None
+  | 1 -> Some ACC_PUBLIC
+  | 2 -> Some ACC_PRIVATE
+  | 4 -> Some ACC_PROTECTED
+  | _ -> failwith "unexpected acces type"
+
 let parse_field_info ic =
   let access_flags_int = input_u2 ic in
-  let access_flags =
-    match access_flags_int land 0b111 with
-    | 0 -> None
-    | 1 -> Some ACC_PUBLIC
-    | 2 -> Some ACC_PRIVATE
-    | 4 -> Some ACC_PROTECTED
-    | _ -> failwith "unexpected acces type"
-  in
+  let access_flags = parse_access_flag access_flags_int in
   let is_static = access_flags_int land 0x0008 = 1 in
   let access_flag_1 =
     match access_flags_int land 0b1110000 with
@@ -275,7 +276,7 @@ let read_class ic =
   let methods =
     Array.make methods_count
       {
-        access_flags = -1;
+        access = None;
         is_native = false;
         name_index = -1;
         descriptor_index = -1;
@@ -286,6 +287,7 @@ let read_class ic =
   for i = 0 to methods_count - 1 do
     let access_flags = input_u2 ic in
     let is_native = access_flags land 0x0100 != 0 in
+    let access = parse_access_flag access_flags in
     let name_index = input_u2 ic in
     let descriptor_index = input_u2 ic in
     let attributes_count = input_u2 ic in
@@ -296,7 +298,7 @@ let read_class ic =
       attributes.(a) <- parse_attribute_info ic
     done;
     methods.(i) <-
-      { access_flags; is_native; name_index; descriptor_index; attributes }
+      { access; is_native; name_index; descriptor_index; attributes }
   done;
 
   let attributes_count = input_u2 ic in
@@ -366,7 +368,7 @@ let cook_field cp (raw_field : field_info) =
 let cook_meth cp raw_meth =
   let name = rslv_name cp raw_meth.name_index in
   let dscr = rslv_name cp raw_meth.descriptor_index in
-  if raw_meth.is_native then ((name, dscr), NativeMeth)
+  if raw_meth.is_native then ((name, dscr), (raw_meth.access, NativeMeth))
   else
     let code_attr = raw_meth.attributes.(0) in
     assert (rslv_name cp code_attr.attribute_name_index = "Code");
@@ -375,13 +377,14 @@ let cook_meth cp raw_meth =
     let max_locals = String.get_uint16_be code_str 2 in
     let code_len = String.get_int32_be code_str 4 |> Int32.to_int in
     ( (name, dscr),
-      LocalMeth
-        {
-          max_stack;
-          max_locals;
-          code = String.sub code_str 8 code_len;
-          exc_table = [||];
-        } )
+      ( raw_meth.access,
+        LocalMeth
+          {
+            max_stack;
+            max_locals;
+            code = String.sub code_str 8 code_len;
+            exc_table = [||];
+          } ) )
 
 let cook_class (raw_class : raw_class) =
   let cp = raw_class.constant_pool in
