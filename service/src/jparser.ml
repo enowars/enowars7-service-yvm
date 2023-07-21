@@ -181,7 +181,8 @@ let parse_cp_info ic =
     | 19 -> C_Module
     | 20 -> C_Package
         *)
-  | tag -> tag |> Printf.sprintf "unexpected Constant Kind Tag: %d" |> failwith
+  | tag ->
+      tag |> Printf.sprintf "unexpected Constant Kind Tag: %d" |> Exc.fail_usage
 
 let parse_attribute_info ic =
   let attribute_name_index = input_u2 ic in
@@ -194,7 +195,7 @@ let parse_access_flag access_flags_int =
   | 1 -> Some ACC_PUBLIC
   | 2 -> Some ACC_PRIVATE
   | 4 -> Some ACC_PROTECTED
-  | _ -> failwith "unexpected acces type"
+  | _ -> Exc.fail_usage "unexpected acces type"
 
 let parse_field_info ic =
   let access_flags_int = input_u2 ic in
@@ -205,7 +206,7 @@ let parse_field_info ic =
     | 0 -> None
     | 0x0010 -> Some ACC_FINAL
     | 0x0040 -> Some ACC_VOLATILE
-    | _ -> failwith "unexpected acces type"
+    | _ -> Exc.fail_usage "unexpected acces type"
   in
   let is_transient = access_flags_int land 0x0080 = 1 in
   let is_synthetic = access_flags_int land 0x1000 = 1 in
@@ -363,7 +364,7 @@ let cook_field cp (raw_field : field_info) =
       ^ " (c.f. \
          https://docs.oracle.com/javase/specs/jvms/se20/html/jvms-4.html#jvms-4.3.2)."
       ^ " Yvm only handles int, char and (multi-dimensional) arrays of those."
-      |> failwith
+      |> Exc.fail_usage
 
 let cook_meth cp raw_meth =
   let name = rslv_name cp raw_meth.name_index in

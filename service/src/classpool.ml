@@ -6,7 +6,7 @@ let not_found what nat klass =
   let name, typ = nat in
   "could not find " ^ what ^ " " ^ name ^ " with type " ^ typ ^ " in class "
   ^ klass
-  |> failwith
+  |> Exc.fail_usage
 
 let rec get_field (t : t) (caller : string) (klass : string)
     (nat : string * string) =
@@ -34,7 +34,7 @@ let rec get_method (t : t) (caller : string) (klass : string)
   | Some kpool -> (
       match List.assoc_opt nat kpool.meths with
       | Some (Some ACC_PRIVATE, meth) ->
-          if caller = klass then Ok meth else failwith "illegal access"
+          if caller = klass then Ok meth else Exc.fail_usage "illegal access"
       | Some (_, meth) -> Ok meth
       | None -> not_found "field" nat klass)
   | None ->
