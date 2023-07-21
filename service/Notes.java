@@ -1,6 +1,9 @@
 class Notes {
 
-	private static char[] errorMsg = {'e', 'r', 'r', 'o', 'r'};
+	private static char[] errorMkdir = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'm', 'k', 'd', 'i', 'r'};
+	private static char[] errorLs    = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'l', 's'};
+	private static char[] errorWrite = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'w', 'r', 'i', 't', 'e'};
+	private static char[] errorRead  = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'r', 'e', 'a', 'd'};
 
 	private native static char[][] getArgs();
 
@@ -23,14 +26,14 @@ class Notes {
 		if (mkdir(t)) {
 			print(t);
 		} else {
-			error(errorMsg);
+			error(errorMkdir);
 		}
 	}
 
 	private static void listNotes(char[] token) {
 		char[][] notes = ls(token);
 		if (notes == null) {
-			error(errorMsg);
+			error(errorLs);
 			return;
 		}
 		for (char[] note : notes) {
@@ -53,7 +56,7 @@ class Notes {
 	private static void addNote(char[] token, char[] name, char[] content) {
 		char[] path = toPath(token, name);
 		if (!write(path, content)) {
-			error(errorMsg);
+			error(errorWrite);
 			return;
 		}
 	}
@@ -62,7 +65,7 @@ class Notes {
 		char[] path = toPath(token, name);
 		char[] r = read(path);
 		if (r == null) {
-			error(errorMsg);
+			error(errorRead);
 			return;
 		}
 		print(r);
