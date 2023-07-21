@@ -51,7 +51,10 @@ let take_args args stack =
         ta_helper args ss (Jparser.P_Char (i |> Int32.to_int |> Char.chr) :: acc)
     | '[' :: args, Jparser.P_Reference arr :: ss ->
         ta_helper args ss (Jparser.P_Reference arr :: acc)
-    | _, _ -> failwith "foo"
+    | c :: _, _ ->
+        if c != 'I' && c != 'C' && c != '[' then
+          Exc.fail_usage "unsupported param type"
+        else failwith "take_args: weird stack"
   in
   let stack, racc = ta_helper args stack [] in
   (stack, racc)
@@ -91,7 +94,8 @@ let run_native state klass name args =
   | "Notes", "write", [ f; c ] -> push (Native.write f c)
   | "Notes", "read", f :: [] -> push (Native.read f)
   | _ ->
-      "native method '" ^ klass ^ "::" ^ name ^ "' not implemented" |> failwith
+      "native method '" ^ klass ^ "::" ^ name ^ "' not implemented"
+      |> Exc.fail_usage
 
 let astore_n n locals = function
   | Jparser.P_Reference s :: ss ->
@@ -596,7 +600,7 @@ let step state =
         | [] -> failwith "empty stack"
       in
       if count > 1000 then
-        failwith "Allocation of array with size >1000 forbidden"
+        Exc.fail_usage "Allocation of array with size >1000 forbidden"
       else ();
       let r = Array.make count (Jparser.P_Char (Char.chr 0)) in
       foo (pc + 2) (Jparser.P_Reference (Some r) :: stack)
@@ -609,7 +613,7 @@ let step state =
         | [] -> failwith "empty stack"
       in
       if count > 1000 then
-        failwith "Allocation of array with size >1000 forbidden"
+        Exc.fail_usage "Allocation of array with size >1000 forbidden"
       else ();
       let r = Array.make count (Jparser.P_Reference None) in
       foo (pc + 3) (Jparser.P_Reference (Some r) :: stack)
@@ -629,13 +633,16 @@ let step state =
         (not is_true, s)
       in
       branch non_null_on_stack
-  | o -> o |> Char.code |> Printf.sprintf "unknown opcode: 0x%x" |> failwith
+  | o ->
+      o |> Char.code
+      |> Printf.sprintf "unsupported opcode: 0x%x"
+      |> Exc.fail_usage
 
 let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let main =
     match List.assoc_opt (name, jtype) c_cls.meths with
     | Some (Some ACC_PUBLIC, Jparser.LocalMeth main) -> main
-    | _ -> failwith ("Method " ^ name ^ jtype ^ " not found")
+    | _ -> Exc.fail_usage ("Method " ^ name ^ jtype ^ " not found")
   in
   let locals = Array.make main.max_locals Jparser.P_Dummy in
   let main_frame =
@@ -656,7 +663,7 @@ let run (c_cls : Jparser.ckd_class) (name, jtype) =
   let i = ref 0 in
   while !state.sstack != [] do
     let _ =
-      if !i > 10_000 then failwith "more than 10k instructions: aborting"
+      if !i > 10_000 then Exc.fail_usage "more than 10k instructions: aborting"
       else incr i
     in
     state := step !state
