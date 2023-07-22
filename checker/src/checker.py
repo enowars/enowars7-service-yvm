@@ -83,7 +83,7 @@ def gen_class_template(
         for i, v in enumerate(ints)
     ]
     s += "\n".join(strs) + "\n"
-    s += "  native static void dump();\n"
+    s += "  private native static void dump();\n"
     s += "  public static void main(String[] args) {\n"
     s += "    dump();\n"
     s += "  }\n"
@@ -342,7 +342,7 @@ vtm_class += "  static int secret_length;\n"
 vtm_class += "}\n"
 
 acc_class = "class " + TMPL_ACCS + "{\n"
-acc_class += "  native static void dump();\n"
+acc_class += "  private native static void dump();\n"
 acc_class += "  public static void main(String[] args) {\n"
 acc_class += "    int result = " + TMPL_VCTM + ".secret_length;\n"
 acc_class += "    dump();\n"
