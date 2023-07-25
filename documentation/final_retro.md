@@ -1,138 +1,134 @@
 ---
 aspectratio: 169
----
-
-TODO
-
-Similar to last presentations
-
-- 8-10 minutes
-- What’s your service (e.g. live demo?)
-    - Explain your service to someone who hasn’t seen it yet
-    - In particular, new vulns/exploits/fixes (since last time)
-- ENOWARS 7
-    - What worked/didn’t work
-    - Lessons Learned / CTF players' feedback
-    - CTF performance
-
+linkcolor: blue
 ---
 
 # yvm
 
-## The Service
+### Last Time on ENOPRESENT
 
-### Run Code
+#### Features
 
-1. PHP scaffold saves classfile, calls `yvm` as subprocess
-1. `yvm` reads classfile
-1. runs `main`
-    - might load more classfiles
-1. dumps internal state
+integers
 
-### YNotes
+classloader
 
+load/store of static variables
+
+#### Vuln
+
+read flag (encoded as ints) from private fields of other class
+
+### Since then...
+
+#### New Features
+
+`invokestatic`
+
+`char[]`
+
+I/O: `read`, `write`, `ls`
+
+#### New App
+
+YNotes
+
+#### New Vuln
+
+Path Traversal
 
 . . .
 
-since it was called _advanced_ ...
+####
+
+And, as requested: _usage How-To_
+
+## Demo
+
+## Engineering Retro
+
+### OCaml
+
+usable for the task since no batteries required
+
+#### the good
+
+nice type system for correctness, refactoring
+
+pleasant and elegant language
+
+#### the bad
+
+few intermediate resources
+
+small stdlib, sparse ecosystem
+
+learning curve: `OCAMLRUNPARAM=B`, `ppx_deriving`
+
+#### the ugly
+
+E.g. conflict between build system / cram test / coverage tool
 
 . . .
 
-It's IMHO:
+#### Fun Fact
 
-- __easy__ / __medium__ to exploit
-- __medium__ ~ __hard__ to fix
+The WASM reference interpreter is written in OCaml
 
+### Testing
 
-### Vuln: Intended Journey
+cram tests _(run yvm on input, compare with expected output)_
 
-1. Attack info: `'{"no_ints": 13, "class_name": "VICARIPICU"}'`
-1. See `VICARIPICU.class` in folder
-1. `javap` / disassemble, see:
-   ```java
-   private static int secret_length = 13;
-   private static int secret_1      = 1162760001;
-   private static int secret_2      = 1094795585;
-   ```
-1. figure out flag encoding
-   ```python
-   b = "ENOA".encode()
-   int.from_bytes(b, byteorder="big", signed=True)  # 1162759985
-   ```
-1. figure out access vector
-   ```java
-   static int get_len = VICARIPICU.secret_length;
-   static int get_1   = VICARIPICU.secret_1;
-   ```
+generate random code with JAttack
 
-### Mitigation
+code coverage
 
-```diff
-@@ -7,6 +7,8 @@ get_field (t : t) (caller : string) (klass : string)
-   match List.assoc_opt klass !t with
-   | Some kpool -> (
-       match List.assoc_opt nat kpool.fields with
-       | Some (_, entry) -> entry
-       | None -> failwith "invalid nat into loaded class")
-```
+fuzzing with AFL
 
-### Mitigation
+. . .
 
-```diff
-@@ -7,6 +7,8 @@ get_field (t : t) (caller : string) (klass : string)
-   match List.assoc_opt klass !t with
-   | Some kpool -> (
-       match List.assoc_opt nat kpool.fields with
-+      | Some (Some Jparser.ACC_PRIVATE, entry) ->
-+          if caller = klass then entry else failwith "invalid access"
-       | Some (_, entry) -> entry
-       | None -> failwith "invalid nat into loaded class")
-```
+`enochecker_test` (btw: [PR - `pytest -k`](https://github.com/enowars/enochecker_test/pull/43) and [nixpkgs](https://github.com/NixOS/nixpkgs/pull/237770))
 
-## The Test Run
+. . .
 
-### What I did
+#### Feature Ideas
 
-Checker _CPU-heavy_ due to `javac`
+`enochecker_test`: local load-test
 
-- fix: precompiled classes and `bytes.replace()`
+`enochecker3`: request logging
 
-Service _flaky_ due to two bugs
+## ENOWARS 7
 
-- `uniqid`
-- `stdout`/`stderr` output file race
+### How it went
 
-Took most of the time to debug
+fine :-)
 
-- missing checker logging
-- acquainting myself with elk
-- enochecker3 #36 (assert logging), #37 (request logging)
+. . .
+
+no outages or hiccups (only a bit CPU intensive)
+
+creative exploits
+
+. . .
+
+well, _very_ creative exploits...
+
+### Fixability
+
+![](img/actually_fixable.png)
+
+### Fixability
+
+![](img/dumb_dump.png)
 
 ### Feedback
 
-Service was played and exploited by people that already knew it.
+![](img/feedback_gdocs.png)
 
-- clarify "usual usage"
-- unsure how difficult fixing would be
+. . .
 
-No attempts to patch the service yet.
+Also nice feedback on discord :)
 
-- Would be interesting for feedback.
+###
 
-## The Future
-
-### Plan
-
-#### TODO
-
-- checker: to not use `javac`
-- make service usage more _understandable_
-
-#### Roadmap
-
-1. refactor to more functional style
-1. Support more types
-1. add low-effort instructions: `imul`, `iconst_<n>`, etc.
-1. Static methods / `invokestatic`
-1. `printInt`, `printChar`
-1. `readChar`
+So yeah, that was fun :-)
