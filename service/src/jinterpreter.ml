@@ -81,9 +81,6 @@ let run_native state klass name args =
   | _, "print", args ->
       List.iter print_pType args;
       state
-  | _, "dump", [] ->
-      state.pool |> Classpool.show |> print_endline;
-      state
   | _, "getArgs", [] -> push (Native.get_args ())
   | "Notes", "getToken", [] -> push (Native.get_token ())
   | "Notes", "mkdir", dir :: [] -> push (Native.mkdir dir)

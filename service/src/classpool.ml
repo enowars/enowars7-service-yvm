@@ -49,9 +49,3 @@ let rec get_method (t : t) (caller : string) (klass : string)
         | None -> get_method t caller klass nat
       in
       r
-
-let show (t : t) =
-  List.map
-    (fun (kname, klass) -> kname ^ "\n" ^ Jparser.show_ckd_class klass)
-    !t
-  |> String.concat "\n"
