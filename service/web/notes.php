@@ -13,7 +13,7 @@ function run_notes(...$args) {
   return trim($stdout);
 }
 
-if (!isset($_COOKIE["token"])) {
+if (!isset($_COOKIE["token"]) || !is_dir( getcwd() . "/notes/" . $_COOKIE["token"])) {
   $token = run_notes("r");
   setcookie("token", $token, time() + 60 * 60 * 24 * 30);
 } else {
