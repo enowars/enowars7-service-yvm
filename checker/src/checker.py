@@ -77,15 +77,15 @@ def gen_class_template(
     assert acc_lvl in ["private", "public"]
 
     s = "class " + name + " {\n"
+    s += "  private native static void print(int i);\n\n"
     s += f"  {acc_lvl} static int secret_length = {hex(length)};\n"
-    strs = [
-        f"   {acc_lvl} static int secret_{str(i)} = {hex(v)};"
-        for i, v in enumerate(ints)
-    ]
-    s += "\n".join(strs) + "\n"
-    s += "  private native static void dump();\n"
+    for i, v in enumerate(ints):
+        s += f"  {acc_lvl} static int secret_{str(i)} = {hex(v)};\n"
+    s += "\n"
     s += "  public static void main(String[] args) {\n"
-    s += "    dump();\n"
+    s += "    print(secret_length);\n"
+    for i, _ in enumerate(ints):
+        s += f"    print(secret_{str(i)});\n"
     s += "  }\n"
     s += "}\n"
     return s
@@ -120,24 +120,14 @@ async def putflag_test(
 
 
 def reconstruct_flag(text: str) -> str:
-    if m := re.search(
-        r'\(\("secret_length", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.P_Int (\d*)l\)\)\)',
-        text,
-    ):
-        length = int(m.group(1))
-    else:
-        raise MumbleException("could not find secret_length in output")
+    text = text.split("<figure><figcaption>stdout</figcaption><pre><code spellcheck='false'>")[1]
+    text = text.split("\n</code></pre></figure>")[0]
 
-    # [("1", "123"), ("2", "-456"), ...]
-    matches = re.findall(
-        r'\("secret_(\d*)", "I"\),\n *\(\([a-zA-Z. _]*\), ref \(\(Jparser.P_Int (-?\d*)l\)\)\)',
-        text,
-    )
-    matches = [(int(i), int(v)) for i, v in matches]
-
-    # sort by index
-    ints = sorted(matches, key=lambda e: e[0])
-    ints = [v for _, v in ints]
+    try:
+        length = int(text.split("\n")[0])
+        ints = [int(i) for i in text.split("\n")[1:]]
+    except:
+        raise MumbleException("unexpected yvm output")
 
     return ints_to_flag(ints, length)
 
@@ -337,15 +327,18 @@ with open(f"{TMPL_NAME}.class", "rb") as f:  # type: ignore
 TMPL_VCTM = "V" * NAME_LENGTH
 TMPL_ACCS = "G" * NAME_LENGTH
 
-vtm_class = "class " + TMPL_VCTM + "{\n"
+vtm_class = "class " + TMPL_VCTM + " {\n"
 vtm_class += "  static int secret_length;\n"
+for i in range(l):
+    vtm_class += f"  static int secret_{i};\n"
 vtm_class += "}\n"
 
-acc_class = "class " + TMPL_ACCS + "{\n"
-acc_class += "  private native static void dump();\n"
+acc_class = "class " + TMPL_ACCS + " {\n"
+acc_class += "  private native static void print(int i);\n"
 acc_class += "  public static void main(String[] args) {\n"
-acc_class += "    int result = " + TMPL_VCTM + ".secret_length;\n"
-acc_class += "    dump();\n"
+acc_class += f"    print({TMPL_VCTM}.secret_length);\n"
+for i in range(l):
+    acc_class += f"    print({TMPL_VCTM}.secret_{i});\n"
 acc_class += "  }\n"
 acc_class += "}\n"
 
