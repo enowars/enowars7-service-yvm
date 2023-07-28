@@ -4,6 +4,7 @@ class Notes {
 	private static char[] errorLs    = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'l', 's'};
 	private static char[] errorWrite = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'w', 'r', 'i', 't', 'e'};
 	private static char[] errorRead  = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'r', 'e', 'a', 'd'};
+	private static char[] errorArg  = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'a', 'r', 'g'};
 
 	native static char[][] getArgs();
 	native static char[] getToken();
@@ -65,8 +66,26 @@ class Notes {
 		print(r);
 	}
 
+	private static boolean checkArg(char[] arg) {
+		for (char c : arg) {
+			if ((c < '0' || c > '9') && (c < 'a' || c > 'z')) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public static void main(String[] _args) {
 		char[][] args = getArgs();
+
+		for (int i = 0; i < (args.length == 4 ? 3 : args.length); i++) {
+			char[] arg = args[i];
+			if (!checkArg(arg)) {
+				error(errorArg);
+				return;
+			}
+		}
+
 		char cmd = args[0][0];
 		switch (cmd) {
 			case 'r':
