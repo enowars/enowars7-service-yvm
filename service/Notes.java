@@ -6,12 +6,12 @@ class Notes {
 	private static char[] errorRead  = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'r', 'e', 'a', 'd'};
 	private static char[] errorArg  = {'e', 'r', 'r', 'o', 'r', ':', ' ', 'a', 'r', 'g'};
 
-	native static char[][] getArgs();
-	native static char[] getToken();
-	native static char[][] ls(char[] dir);
-	native static void print(char[] arg);
-	native static void error(char[] arg);
-	native static char[] read(char[] file);
+	private native static char[][] getArgs();
+	private native static char[] getToken();
+	private native static char[][] ls(char[] dir);
+	private native static void print(char[] arg);
+	private native static void error(char[] arg);
+	private native static char[] read(char[] file);
 
 	private static void register() {
 		char[] t = getToken();
