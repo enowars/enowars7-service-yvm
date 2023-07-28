@@ -13,6 +13,8 @@ let rec get_field (t : t) (caller : string) (klass : string)
   match List.assoc_opt klass !t with
   | Some kpool -> (
       match List.assoc_opt nat kpool.fields with
+      | Some (Some Jparser.ACC_PRIVATE, entry) ->
+          if caller = klass then Ok entry else failwith "illegal access"
       | Some (_, entry) -> Ok entry
       | None -> not_found "field" nat klass)
   | None ->
