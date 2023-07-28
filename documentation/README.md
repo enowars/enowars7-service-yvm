@@ -1,11 +1,3 @@
-- how the service works in general
-- the vulns
-- the exploits
-- the fixes
-
-> all one needs to know to use the service at some later point (e.g. BambiCTF)
-> or for people to understand your service post-CTF.
-
 # YVM
 
 This service offers two distinct features:
@@ -50,17 +42,17 @@ class file or the `Notes` class[^Notes] that implements the _YNotes_ app.
 
 The `yvm` supports:
 
-- `int` and `char` primitive types, and (multidimensional) arrays thereof
-- static methods and fields
-- rudimentary classloading, i.e.\ users can reference static methods and fields
-  of previously uploaded classes
+- `int` and `char` primitive types and (multidimensional) arrays thereof.
+- static methods and fields.
+- rudimentary classloading, i.e. users can reference static methods and fields
+  of previously uploaded classes.
 - native `print` methods to print the supported types, i.e. `print(int i)`,
   `print(char c)` etc.
-- native `dump` method to print the interpreter state.
 - Some more native methods to allow the `Notes` class to do I/O.
 
 It does neither support `long`, `float` and `double`, nor instantiating objects
-via `new`[^new], nor invoking non-static methods, nor inheritance.
+via `new`[^new], nor invoking non-static methods, nor inheritance, interfaces,
+etc.
 
 [^new]: Note that arrays differ in this case from Objects, as they are
   created by the supported `newarray` and `anewarray` instructions as opposed
@@ -114,34 +106,34 @@ interprets the `Notes.class`, that is stored in `classes/`.
 
 ### `classes/`
 
-The checker encodes the flag as integers, stores them as `static` members in a class
+The checker encodes the flag as integers, stores them as `private static` members in a class
 with a random name and uploads that class.
 The integers are printed during execution of the class.
-The flag is retrieved by re-execution the class via the `replay_id`.
+The flag is retrieved by re-executing the class via the `replay_id`.
 
 The flag encoding scheme is the following:
 
 ```
-ENO🚩  <=>  E    N    O    <4-byte flag emoji>
-            |    |    |            |
-	    |    |    |    +-----+-+--+----+
-	    v    v    v    v     v    v    v
-           0x45 0x4e 0x4f 0xf0  0x9f 0x9a 0xa9 [0x00 padding]
-           \                 /  \                /
-            \               /    \             /
-                0x454e4ff0         0x9f9aa900
-                    ^                 ^
-		    |                 |
-		    v                 v
-                1162760176        -1617254144
+"ENO🚩"   <=>   E    N    O    <4-byte flag emoji>
+                |    |    |            |
+                |    |    |    +-----+-+--+----+
+                v    v    v    v     v    v    v
+               0x45 0x4e 0x4f 0xf0  0x9f 0x9a 0xa9 [0x00 padding]
+               \                 /  \                /
+                \               /    \             /
+                    0x454e4ff0         0x9f9aa900
+                        ^                 ^
+                        |                 |
+                        v                 v
+                    1162760176        -1617254144
 
-		              ^
-		              |
-		              v
+                                  ^
+                                  |
+                                  v
 
-          private static secret_length = 7;
-          private static secret_0 =  1162760176;
-          private static secret_1 = -1617254144;
+              private static secret_length = 7;
+              private static secret_0 =  1162760176;
+              private static secret_1 = -1617254144;
 ```
 
 ### `notes/`
@@ -155,7 +147,7 @@ The service has three vulnerabilities.
 The first two allow access to both flag stores, the last only compromises the
 `classes/` flag store.
 
-Each vuln has a corresponding commit on the `fixed` branch.
+Each vuln is fixed by a commit on the `fixed` branch.
 
 ### Path Traversal via `token` cookie
 
@@ -169,28 +161,28 @@ listing of `notes/` compromises all users.
 The attacker can then iterate through the newest directories (identifiable by
 the creation time prefix) to find the current flag.
 
-The vuln is fixed by only allowing `[a-z0-9]` as the second and third parameter
-handed to `Notes.java`.
+The vuln is fixed by only allowing `[a-z0-9]` as the second (`token`) and third
+(name of note) parameter handed to `Notes`.
 
 ### Non-private `ls`, `read` Method in `Notes.java`
 
 `Notes.java` has multiple native helper methods (`ls`, `mkdir`, `read`,
-`write`).
-The `yvm` ensures, that these native methods can only be called by the `Notes.java`
-class and `mkdir` and `write` are already declared `private` to prevent DOS by
+`write`, etc.).
+The `yvm` ensures, that these native methods can only be called by the `Notes`
+class and `mkdir` and `write` are already declared private to prevent DOS by
 file/dir creation.
 
-But the `ls` and `read` methods are _not_ declared `private`. So while a class `Foo`
+But the `ls` and `read` methods are _not_ declared private. So while a class `Foo`
 cannot use a `ls` method declared by itself due to the `yvm` check, it can call
 `Notes.ls(...)` since the method is not (yet) private.
 
 The vuln is fixed by changing the visibility of the native methods in
-`Notes.java` to `private`.
+`Notes.java` to private.
 
 ### Access to private class fields
 
-While the `yvm` prevents the illegal access of `private` methods, the
-corresponding check for `private` fields is missing.
+While the `yvm` prevents the illegal access of private methods, the
+corresponding check for private fields is missing.
 Thus, an attacker can create a class `Foo` that prints the private `secret_...`
 fields of the class containing the flag, whose name is known from the attack
 info.
